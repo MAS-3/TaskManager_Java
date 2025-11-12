@@ -1,0 +1,81 @@
+body {
+    font-family: sans-serif;
+    margin: 2em;
+    background-color: #f4f4f4;
+}
+
+h1,
+h2 {
+    color: #333;
+}
+
+.task-list {
+    list-style: none;
+    padding: 0;
+}
+
+.task-item {
+    background-color: #fff;
+    margin-bottom: 10px;
+    padding: 15px;
+    border-radius: 5px;
+    display: flex;
+    /* 横並びにする */
+    justify-content: space-between;
+    /* 両端に寄せる */
+    align-items: center;
+    /* 中央揃え */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.task-title {
+    font-size: 1.2em;
+}
+
+.task-item s {
+    /* 完了済みのタスク (打ち消し線) */
+    color: #888;
+}
+
+.task-actions form {
+    display: inline-block;
+    /* フォームを横並びにする */
+    margin-left: 10px;
+}
+
+.btn {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    color: white;
+}
+
+.btn-complete {
+    background-color: #28a745;
+}
+
+/* 緑 */
+.btn-delete {
+    background-color: #dc3545;
+}
+
+/* 赤 */
+
+.form-add {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.form-add input[type="text"] {
+    padding: 8px;
+    width: 250px;
+}
+
+.form-add button {
+    background-color: #007bff;
+    color: white;
+    padding: 8px 12px;
+}
