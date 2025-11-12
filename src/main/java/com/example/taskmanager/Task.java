@@ -4,6 +4,7 @@ package com.example.taskmanager;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
+import jakarta.persistence.Column;
 
 /**
  * (1) @Entity
@@ -38,6 +39,15 @@ public class Task {
      */
     private boolean completed = false;
 
+    /**
+     * メモ欄（description）用のフィールドを追加
+     * @Column(length = 1000) を付けることで、
+     * DB側で長めのテキスト（例: VARCHAR(1000)）を
+     * 保存できるように指定します。
+     * （付けないと短い文字列(VARCHAR(255))が標準になる場合があります）
+     */
+    @Column(length = 1000)
+    private String description;
 
     // --- (ここから下は、JPAやThymeleafが動作するために必要なお決まりの記述です) ---
 
@@ -86,4 +96,16 @@ public class Task {
     public void setCompleted(boolean completed) {
         this.completed = completed;
     }
+
+    /**
+     * description フィールド用の Getter と Setter
+     */
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
 }

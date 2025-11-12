@@ -12,16 +12,18 @@
     <h1>タスク一覧</h1>
 
     <ul class="task-list">
-        
         <li th:each="task : ${tasks}" class="task-item">
             
+            <!-- List（既存タスク） -->
             <div>
                 <s th:if="${task.completed}">
                     <span th:text="${task.title}" class="task-title"></span>
                 </s>
                 <span th:if="${!task.completed}" th:text="${task.title}" class="task-title"></span>
-            </div>
 
+                <p th:if="${task.description != null && !task.description.isEmpty()}" th:text="${task.description}" class="task-description">
+                </p>
+            </div>
             <div class="task-actions">
                 
                 <form th:if="${!task.completed}" th:action="@{/tasks/{id}/complete(id=${task.id})}" method="post">
@@ -31,7 +33,9 @@
                 <form th:action="@{/tasks/{id}/delete(id=${task.id})}" method="post">
                     <button type="submit" class="btn btn-delete">削除</button>
                 </form>
+
             </div>
+
         </li>
     </ul>
 
@@ -43,8 +47,14 @@
     <h2>新しいタスクの追加</h2>
 
     <form th:action="@{/tasks/create}" method="post" class="form-add">
-        <label>タスク名:</label>
-        <input type="text" name="title" required>
+        <div>
+            <label>タスク名:</label>
+            <input type="text" name="title" required>
+        </div>
+        <div>
+            <label>メモ:</label>
+            <textarea name="description" rows="3" cols="40"></textarea>
+        </div>
         <button type="submit" class="btn">追加</button>
     </form>
 

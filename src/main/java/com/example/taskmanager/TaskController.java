@@ -58,13 +58,19 @@ public class TaskController {
      * "/tasks/create" へのPOSTリクエストが来たら、このメソッドが動きます。
      */
     @PostMapping("/tasks/create")
-    public String createTask(@RequestParam("title") String title) {
+    public String createTask(
+        @RequestParam("title") String title,
+        @RequestParam("description") String description
+    ) {
         // (2) @RequestParam("title") String title
         // フォームから送られてきた name="title" のデータを、
         // String 型の変数 title として受け取ります。
 
         // (3) 受け取ったタイトルで、新しい Task オブジェクトを作成
         Task newTask = new Task(title);
+
+        // ★★★ 2. 受け取った description を newTask にセットする ★★★
+        newTask.setDescription(description);
 
         // (4) TaskRepository を使って、新しいタスクをDBに保存
         taskRepository.save(newTask);
