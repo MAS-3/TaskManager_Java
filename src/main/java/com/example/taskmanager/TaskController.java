@@ -6,45 +6,60 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-// ★1. この import 文を追記してください
 import org.springframework.web.bind.annotation.PathVariable;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 
 /**
- * (1) @Controller
- * これがブラウザからのリクエストを受け付ける「コントローラ（司令塔）」
- * であることをSpringに伝えます。
- *
- * (メモ: APIでデータを返すときは @RestController を使いましたが、
- * 今回はHTML画面を返すので @Controller を使います)
+ * ========================================
+ * TaskController
+ * ========================================
+ * 
+ * タスク管理アプリケーションのメインコントローラー
+ * ブラウザからのリクエストを受け付け、DBとやり取りし、HTMLを返す
+ * 
+ * 【エンドポイント一覧】
+ * - GET  /tasks              : 未完了タスク一覧を表示
+ * - POST /tasks/create       : 新規タスク作成
+ * - POST /tasks/{id}/complete: タスク完了（アーカイブへ）
+ * - POST /tasks/{id}/delete  : タスク削除
+ * - GET  /archive            : 完了済みタスク一覧を表示
+ * - GET  /tasks/{id}/edit    : タスク編集画面を表示
  */
 @Controller
 public class TaskController {
 
-    /**
-     * (2) @Autowired (オートワイヤード)
-     * Springが自動で作ってくれた TaskRepository の実体を、
-     * この変数（taskRepository）に自動でセット（注入）してね、という指示です。
-     * これにより、このクラス内で taskRepository.findAll() などが使えるようになります。
-     */
     @Autowired
     private TaskRepository taskRepository;
 
+    @Autowired
+    private GenreRepository genreRepository;
+
+    @Autowired
+    private DeadlineRepository deadlineRepository;
+
+    @Autowired
+    private RelatedURLRepository relatedURLRepository;
+
     /**
      * (3) @GetMapping("/tasks")
-     * ブラウザから "http://localhost:8080/tasks" というURLへ
-     * GETリクエストが来た時に、この listTasks メソッドを実行する、という設定です。
+     * ブラウザから "http://localhost:8080/tasks" というURLへGETリクエストが来た時に、この listTasks メソッドを実行する、という設定です。
      * (Laravelの routes/web.php で Route::get('/tasks', ...) と書くのと同じです)
      */
     @GetMapping("/tasks")
     public String listTasks(Model model) { // (4) Model model
 
-        // (5) DBからすべてのタスクを取得する
-        // TaskRepository の findAll() メソッドを使います。
-        var tasks = taskRepository.findAll();
+        //タスクリストの取得
+        // (A) DBから「未完了(isCompleted = false)」のタスクのみを取得する（アーカイブ用）
+        var tasks = taskRepository.findByIsCompletedFalse(); // ★ Repositoryに追加したメソッドを使う
+        // (B) DBから「ジャンル」の全リストを取得する
+        var allGenres = genreRepository.findAll();
 
         // (6) 取得したタスク一覧を "tasks" という名前で Model に追加する
         // Model とは、コントローラからHTML（画面）へデータを運ぶための「かばん」です。
         model.addAttribute("tasks", tasks);
+        model.addAttribute("allGenres", allGenres);//"allGenres" もかばんに入れる
 
         // (7) "tasks.html" という名前のHTMLテンプレートを表示してね、と返す
         // Spring Boot（Thymeleaf）は自動的に
@@ -58,19 +73,13 @@ public class TaskController {
      * "/tasks/create" へのPOSTリクエストが来たら、このメソッドが動きます。
      */
     @PostMapping("/tasks/create")
-    public String createTask(
-        @RequestParam("title") String title,
-        @RequestParam("description") String description
-    ) {
+    public String createTask(@RequestParam("title") String title) {
         // (2) @RequestParam("title") String title
         // フォームから送られてきた name="title" のデータを、
         // String 型の変数 title として受け取ります。
 
         // (3) 受け取ったタイトルで、新しい Task オブジェクトを作成
         Task newTask = new Task(title);
-
-        // ★★★ 2. 受け取った description を newTask にセットする ★★★
-        newTask.setDescription(description);
 
         // (4) TaskRepository を使って、新しいタスクをDBに保存
         taskRepository.save(newTask);
