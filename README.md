@@ -32,11 +32,13 @@ Spring BootとDockerで作成したシンプルなタスク管理アプリです
 
 3.  **Dockerコンテナを実行:**
     （ホストの`8080`番ポートに接続し、`taskmanager-db`フォルダにデータを永続化します）
-    ```bash
-    docker run -d -p 8080:8080 -v ./taskmanager-db:/data --name my-task-app taskmanager-app
-    ```
 
-4.  **アクセス:**
+    ```bash
+    docker run -d -p 8080:8080 -v $(pwd)/taskmanager-db:/data --name my-task-app taskmanager-app
+    ```
+    （相対パスがローカル環境で変わるので、(pwd)で実行
+
+5.  **アクセス:**
     ブラウザで `http://localhost:8080/tasks` を開きます。
 
 ---
