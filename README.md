@@ -34,9 +34,9 @@ Spring BootとDockerで作成したシンプルなタスク管理アプリです
     （ホストの`8080`番ポートに接続し、`taskmanager-db`フォルダにデータを永続化します）
 
     ```bash
-    docker run -d -p 3000:3000 \ -e SPRING_PROFILES_ACTIVE=[環境名を指定：例: sht-macbook] \  -v $(pwd)/taskmanager-db:/data \ --name my-task-app taskmanager-app
+    docker run -d -p 3000:3000 -e SPRING_PROFILES_ACTIVE=[環境名を指定：例: sht-macbook] -v $(pwd) taskmanager-db:/data --name my-task-app taskmanager-app
     # 例: sht-macbookの設定で起動
-        docker run -d -p 3000:3000 \ -e SPRING_PROFILES_ACTIVE=sht-macbook \ -v $(pwd)/taskmanager-db:/data \ --name my-task-app taskmanager-app
+        docker run -d -p 3000:3000 -e SPRING_PROFILES_ACTIVE=sht-macbook -v $(pwd)/taskmanager-db:/data --name my-task-app taskmanager-app
     ```
     （相対パスがローカル環境で変わるので、(pwd)で実行
 
