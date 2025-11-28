@@ -60,6 +60,7 @@ public class TaskController {
         // Model とは、コントローラからHTML（画面）へデータを運ぶための「かばん」です。
         model.addAttribute("tasks", tasks);
         model.addAttribute("allGenres", allGenres);//"allGenres" もかばんに入れる
+        model.addAttribute("today", LocalDate.now());
 
         // (7) "tasks.html" という名前のHTMLテンプレートを表示してね、と返す
         // Spring Boot（Thymeleaf）は自動的に
@@ -73,19 +74,73 @@ public class TaskController {
      * "/tasks/create" へのPOSTリクエストが来たら、このメソッドが動きます。
      */
     @PostMapping("/tasks/create")
-    public String createTask(@RequestParam("title") String title) {
+    public String createTask(
+        // createTaskメソッドの引数
+        // (A) 基本情報を受け取る
+        @RequestParam("title") String title,
+        @RequestParam("description") String description,
+        @RequestParam("genreId") Long genreId,
+
+        // (B) ★「複数の」納期 (配列として受け取る)
+        @RequestParam(value = "deadlineName", required = false) List<String> deadlineNames,
+        @RequestParam(value = "deadlineDate", required = false) List<String> deadlineDates,
+
+        // (C) ★「複数の」関連URL (配列として受け取る)
+        @RequestParam(value = "urlName", required = false) List<String> urlNames,
+        @RequestParam(value = "urlLink", required = false) List<String> urlLinks
+    ) {
         // (2) @RequestParam("title") String title
         // フォームから送られてきた name="title" のデータを、
         // String 型の変数 title として受け取ります。
 
         // (3) 受け取ったタイトルで、新しい Task オブジェクトを作成
         Task newTask = new Task(title);
+        newTask.setTitle(title);//タイトルをセット
+        newTask.setDescription(description);//概要をセット
+        
+        genreRepository.findById(genreId).ifPresent(genre -> {//ユーザーがブラウザ上で選択したジャンルを取得
+            newTask.setGenre(genre);//ジャンルをセット
+        });
 
-        // (4) TaskRepository を使って、新しいタスクをDBに保存
+        // 納期入力の処理
+        if (deadlineNames != null && deadlineDates != null) {
+            for (int i = 0; i < deadlineNames.size(); i++) {
+
+                // ★【安全装置】日付リストが名前リストより短い場合、エラーにならないようにループを抜ける
+                if (i >= deadlineDates.size()) break;
+
+                if (!deadlineNames.get(i).isEmpty() && !deadlineDates.get(i).isEmpty()) {
+                    Deadline deadline = new Deadline();
+                    deadline.setName(deadlineNames.get(i));
+                    deadline.setDate(LocalDate.parse(deadlineDates.get(i)));
+                    
+                    // ★Task.java の便利メソッドを使って関連付ける
+                    newTask.addDeadline(deadline); 
+                }
+            }
+        };
+
+        // (4) 関連URL入力の処理
+        if (urlNames != null && urlLinks != null) {
+            for (int i = 0; i < urlNames.size(); i++) {
+                // ★【安全装置】リンク先リストが名前リストより短い場合、ループを抜ける
+                if (i >= urlLinks.size()) break;
+
+                if (!urlNames.get(i).isEmpty() && !urlLinks.get(i).isEmpty()) {
+                    RelatedURL url = new RelatedURL();
+                    url.setName(urlNames.get(i));
+                    url.setUrl(urlLinks.get(i));
+                    
+                    newTask.addRelatedURL(url);
+                }
+            }
+        };
+
+
+        // セットしたもの一式を保存
         taskRepository.save(newTask);
 
         // (5) 処理が終わったら、タスク一覧ページ ("/tasks") にリダイレクト（再表示）
-        //    (Laravel の redirect('/tasks') と同じです)
         return "redirect:/tasks";
     }
 
@@ -110,6 +165,7 @@ public class TaskController {
         if (taskOpt.isPresent()) {
             Task task = taskOpt.get(); // タスク本体を取り出す
             task.setCompleted(true); // (5) 完了フラグを true に変更
+            task.setCompletedAt(LocalDateTime.now());
             taskRepository.save(task); // (6) 変更したタスクをDBに上書き保存 (IDがあるのでUPDATEになる)
         }
         
@@ -189,6 +245,10 @@ public class TaskController {
         // (6) フォームから送られてきた「新しい納期」を処理（createTaskと同じロジック）
         if (deadlineNames != null && deadlineDates != null) {
             for (int i = 0; i < deadlineNames.size(); i++) {
+
+                // ★【安全装置】日付リストが名前リストより短い場合、エラーにならないようにループを抜ける
+                if (i >= deadlineDates.size()) break;
+
                 if (!deadlineNames.get(i).isEmpty() && !deadlineDates.get(i).isEmpty()) {
                     Deadline deadline = new Deadline();
                     deadline.setName(deadlineNames.get(i));
@@ -201,6 +261,10 @@ public class TaskController {
         // (7) フォームから送られてきた「新しいURL」を処理（createTaskと同じロジック）
         if (urlNames != null && urlLinks != null) {
             for (int i = 0; i < urlNames.size(); i++) {
+
+                // ★【安全装置】リンク先リストが名前リストより短い場合、ループを抜ける
+                if (i >= urlLinks.size()) break;
+
                 if (!urlNames.get(i).isEmpty() && !urlLinks.get(i).isEmpty()) {
                     RelatedURL url = new RelatedURL();
                     url.setName(urlNames.get(i));
@@ -230,5 +294,37 @@ public class TaskController {
         
         // (2) 一覧ページにリダイレクト
         return "redirect:/tasks";
+    }
+
+    //
+    //
+    // Archive
+    //
+    //
+    /**
+     * (10) ★アーカイブ画面の表示 (実装)
+     * (GET /archive)
+     */
+    @GetMapping("/archive")
+    public String archiveList(Model model) {
+        // (A) 完了済み(isCompleted = true)のタスクを取得
+        var archiveTasks = taskRepository.findByIsCompletedTrue();
+        
+        model.addAttribute("tasks", archiveTasks);
+        
+        return "archive"; // archive.html を表示
+    }
+
+    /**
+     * (11) ★タスクを未完了に戻す処理 (Revert)
+     * (POST /tasks/{id}/revert)
+     */
+    @PostMapping("/tasks/{id}/revert")
+    public String revertTask(@PathVariable("id") Long id) {
+        taskRepository.findById(id).ifPresent(task -> {
+            task.setCompleted(false); // 未完了に戻す
+            taskRepository.save(task);
+        });
+        return "redirect:/archive"; // アーカイブ一覧に戻る
     }
 }
