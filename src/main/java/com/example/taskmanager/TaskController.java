@@ -51,6 +51,9 @@ public class TaskController {
     @GetMapping("/tasks")
     public String listTasks(Model model) {
 
+        // ★共通メソッドを呼ぶ
+        loadTaskData(model);
+
         //タスクリストの取得
         // (A) DBから「未完了(isCompleted = false)」のタスクのみを取得する（アーカイブ用）
         var tasks = taskRepository.findByIsCompletedFalse(); // ★ Repositoryに追加したメソッドを使う
@@ -330,5 +333,38 @@ public class TaskController {
             taskRepository.save(task);
         });
         return "redirect:/archive"; // アーカイブ一覧に戻る
+    }
+
+    /**
+     * (12) ★納期の完了状態を切り替える (Toggle)
+     * (POST /deadlines/{id}/toggle)
+     * ボタンを押すたびに true <-> false が入れ替わります。
+     */
+    @PostMapping("/deadlines/{id}/toggle")
+    public String toggleDeadline(@PathVariable("id") Long id ,Model model) {
+        deadlineRepository.findById(id).ifPresent(d -> {
+            // 現在の状態を反転させる (trueならfalseに、falseならtrueに)
+            d.setCompleted(!d.isCompleted());
+            deadlineRepository.save(d);
+        });
+
+        // (1) 最新のタスクデータを取得・ソートしてModelに入れる
+        loadTaskData(model);
+
+        // (2) ★ページ全体("tasks")ではなく、
+        //      tasks.htmlの中にある "taskListArea" という断片だけを返す！
+        return "tasks :: taskListArea";
+    }
+
+    /**
+     * DBから未完了タスクを取得し、ソートしてModelに入れる共通処理
+     */
+    private void loadTaskData(Model model) {
+        var tasks = taskRepository.findByIsCompletedFalse();
+        // ソート（Task.javaで実装したロジック）
+        tasks.sort(Comparator.comparing(Task::getEarliestDeadlineDate));
+        
+        model.addAttribute("tasks", tasks);
+        // (ジャンル一覧などはリスト更新だけなら不要なので省略可ですが、念のため入れてもOK)
     }
 }

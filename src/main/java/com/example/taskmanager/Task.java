@@ -187,6 +187,7 @@ public class Task {
         }
 
         return deadlines.stream()// 納期リスト(deadlines)をストリーム（流れ）にして処理する
+                .filter(d -> !d.isCompleted())//完了タスクのみを通す
                 .map(Deadline::getDate) // Deadlineオブジェクトから「日付」だけを取り出す
                 .min(LocalDate::compareTo) // 日付同士を比較して「最小値」を探す
                 .orElse(LocalDate.MAX); // 万が一見つからなければ最大値を返す

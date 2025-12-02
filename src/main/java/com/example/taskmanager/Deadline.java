@@ -27,6 +27,7 @@ public class Deadline {
     @ManyToOne
     @JoinColumn(name = "task_id") // DBには "task_id" カラムが作られます
     private Task task;
+    private boolean isCompleted = false;//完了ステータス管理カラム
 
     // --- Getter / Setter ---
     // (JPAが動作するために必須です)
@@ -72,5 +73,13 @@ public class Deadline {
 
     public void setTask(Task task) {
         this.task = task;
+    }
+
+    public boolean isCompleted() {
+        return isCompleted;
+    }
+
+    public void setCompleted(boolean isCompleted){
+        this.isCompleted = isCompleted;
     }
 }
