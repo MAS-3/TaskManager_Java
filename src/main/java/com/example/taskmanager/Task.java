@@ -10,6 +10,7 @@ import jakarta.persistence.OneToMany;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.CascadeType;
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -174,5 +175,20 @@ public class Task {
     public void addRelatedURL(RelatedURL url) {
         this.relatedUrls.add(url);
         url.setTask(this);
+    }
+
+    /**
+     * このタスクが持つ納期リスト(deadlines)の中で、
+     * 「最も早い日付」を探して返す便利メソッド
+     */
+    public LocalDate getEarliestDeadlineDate() {
+        if (deadlines.isEmpty()) {// もし納期が1つも登録されていなければ...
+            return LocalDate.MAX; // ソート順で「一番後ろ」にしたいので、「すごく遠い未来」を返す
+        }
+
+        return deadlines.stream()// 納期リスト(deadlines)をストリーム（流れ）にして処理する
+                .map(Deadline::getDate) // Deadlineオブジェクトから「日付」だけを取り出す
+                .min(LocalDate::compareTo) // 日付同士を比較して「最小値」を探す
+                .orElse(LocalDate.MAX); // 万が一見つからなければ最大値を返す
     }
 }

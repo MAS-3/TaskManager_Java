@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Comparator;
 
 /**
  * ========================================
@@ -48,11 +49,14 @@ public class TaskController {
      * (Laravelの routes/web.php で Route::get('/tasks', ...) と書くのと同じです)
      */
     @GetMapping("/tasks")
-    public String listTasks(Model model) { // (4) Model model
+    public String listTasks(Model model) {
 
         //タスクリストの取得
         // (A) DBから「未完了(isCompleted = false)」のタスクのみを取得する（アーカイブ用）
         var tasks = taskRepository.findByIsCompletedFalse(); // ★ Repositoryに追加したメソッドを使う
+
+        tasks.sort(Comparator.comparing(Task::getEarliestDeadlineDate));//納期が近い順にソート
+
         // (B) DBから「ジャンル」の全リストを取得する
         var allGenres = genreRepository.findAll();
 
