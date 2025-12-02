@@ -1,10 +1,18 @@
 package com.example.taskmanager;
 
-// jakarta.persistence.* の3つをインポートします
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Column;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToMany;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.CascadeType;
+import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 /**
  * (1) @Entity
@@ -25,7 +33,7 @@ public class Task {
      * 主キー（id）の値をデータベースが自動で採番（例: 1, 2, 3...）
      * してくれることを示します。
      */
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY) // (H2/PostgreSQL/MySQLで推奨される設定)
     private Long id; // タスクのID
 
     /**
@@ -35,21 +43,52 @@ public class Task {
 
     /**
      * (5) タスクが完了したかどうかを保存するカラム（フィールド）
-     * 最初は必ず「未完了(false)」で作成されるようにデフォルト値を設定します。
+     * (「タスク完了ボタン - アーカイブに追加」の機能)
+     * false = 未完了
+     * true = 完了（アーカイブ行き）
      */
-    private boolean completed = false;
+    private boolean isCompleted = false;
+
+    /**
+     * ★(新規追加) 完了した日時
+     * （アーカイブの30日ルールなどで使う）
+     */
+    private LocalDateTime completedAt;
 
     /**
      * メモ欄（description）用のフィールドを追加
+     * (「タスク概要」として使用)
      * @Column(length = 1000) を付けることで、
      * DB側で長めのテキスト（例: VARCHAR(1000)）を
      * 保存できるように指定します。
-     * （付けないと短い文字列(VARCHAR(255))が標準になる場合があります）
      */
-    @Column(length = 1000)
+    @Column(length = 2000) // 概要は長くなるかもしれないので 2000 に変更
     private String description;
 
-    // --- (ここから下は、JPAやThymeleafが動作するために必要なお決まりの記述です) ---
+    /**
+     * ジャンルとの関連
+     * @ManyToOne : 「多対一」の関係 (Task N : 1 Genre)
+     */
+    @ManyToOne
+    @JoinColumn(name = "genre_id")
+    private Genre genre;
+
+    /**
+     * 納期との関連
+     * @OneToMany : 「1対多」の関係 (Task 1 : N Deadline)
+     * mappedBy = "task": 関連の管理は Deadline.java 側の "task" フィールドが行う
+     * cascade = CascadeType.ALL: Taskを保存・削除したら、関連するDeadlineも一緒に保存・削除
+     * orphanRemoval = true: TaskとDeadlineの関連が切れたら、DeadlineもDBから削除
+     */
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<Deadline> deadlines = new LinkedHashSet<>();
+
+    /**
+     * 関連URLとの関連
+     * @OneToMany : 「1対多」の関係 (Task 1 : N RelatedURL)
+     */
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<RelatedURL> relatedUrls = new LinkedHashSet<>();
 
     /**
      * (6) 引数なしのコンストラクタ
@@ -66,14 +105,10 @@ public class Task {
     }
 
     /**
-     * (8) 各フィールドの Getter と Setter
-     * JPAやThymeleafが、このクラスの内部データ（id, title, completed）に
-     * アクセスするために必要です。
-     *
-     * (VSCodeの機能で自動生成もできます)
+     * 各フィールドの Getter と Setter（データベースとのやり取り窓口）
      */
     
-    // id
+    // タスクのID
     public Long getId() {
         return id;
     }
@@ -81,7 +116,7 @@ public class Task {
         this.id = id;
     }
 
-    // title
+    // タスクタイトル
     public String getTitle() {
         return title;
     }
@@ -89,23 +124,101 @@ public class Task {
         this.title = title;
     }
 
-    // completed
+    // タスク完了ステータス
     public boolean isCompleted() {
-        return completed;
+        return isCompleted;
     }
     public void setCompleted(boolean completed) {
-        this.completed = completed;
+        this.isCompleted = completed;
     }
 
-    /**
-     * description フィールド用の Getter と Setter
-     */
+    //概要欄
     public String getDescription() {
         return description;
     }
-
     public void setDescription(String description) {
         this.description = description;
     }
 
+    //完了タスク（アーカイブ用）
+    public LocalDateTime getCompletedAt() {
+        return completedAt;
+    }
+    public void setCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
+    }
+
+    // ジャンル
+    public Genre getGenre() {
+        return genre;
+    }
+    public void setGenre(Genre genre) {
+        this.genre = genre;
+    }
+
+    //納期
+    public Set<Deadline> getDeadlines() {
+        return deadlines;
+    }
+    public void setDeadlines(Set<Deadline> deadlines) {
+        this.deadlines = deadlines;
+    }
+
+    // 関連URL
+    public Set<RelatedURL> getRelatedUrls() {
+        return relatedUrls;
+    }
+    public void setRelatedUrls(Set<RelatedURL> relatedUrls) {
+        this.relatedUrls = relatedUrls;
+    }
+
+    /**
+     * 画像とのリレーション
+     */
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TaskImage> images = new LinkedHashSet<>();
+
+    // ... (Getter/Setter) ...
+
+    // 画像
+    public Set<TaskImage> getImages() {
+        return images;
+    }
+    public void setImages(Set<TaskImage> images) {
+        this.images = images;
+    }
+    public void addImage(TaskImage image) {
+        this.images.add(image);
+        image.setTask(this);
+    }
+
+
+    /**
+     * 関連（Deadline, RelatedURL）を簡単に追加するための便利メソッド
+     */
+    public void addDeadline(Deadline deadline) {
+        this.deadlines.add(deadline);
+        deadline.setTask(this);
+    }
+
+    public void addRelatedURL(RelatedURL url) {
+        this.relatedUrls.add(url);
+        url.setTask(this);
+    }
+
+    /**
+     * このタスクが持つ納期リスト(deadlines)の中で、
+     * 「最も早い日付」を探して返す便利メソッド
+     */
+    public LocalDate getEarliestDeadlineDate() {
+        if (deadlines.isEmpty()) {// もし納期が1つも登録されていなければ...
+            return LocalDate.MAX; // ソート順で「一番後ろ」にしたいので、「すごく遠い未来」を返す
+        }
+
+        return deadlines.stream()// 納期リスト(deadlines)をストリーム（流れ）にして処理する
+                .filter(d -> !d.isCompleted())//完了タスクのみを通す
+                .map(Deadline::getDate) // Deadlineオブジェクトから「日付」だけを取り出す
+                .min(LocalDate::compareTo) // 日付同士を比較して「最小値」を探す
+                .orElse(LocalDate.MAX); // 万が一見つからなければ最大値を返す
+    }
 }

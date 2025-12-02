@@ -2,6 +2,8 @@ package com.example.taskmanager;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+import java.util.List;
+import org.springframework.data.jpa.repository.EntityGraph;//JOINでクエリをかける時に使用するエンティティ
 
 /**
  * (1) @Repository
@@ -10,9 +12,6 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface TaskRepository extends JpaRepository<Task, Long> {
-
-    // (2) これだけ！
-
     /**
      * JpaRepository<Task, Long> を「extends（継承）」するだけで、
      * Spring Data JPAが裏側で自動的に以下のメソッドを実装してくれます。
@@ -27,4 +26,16 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * 「その主キーの型は Long（Task.javaで id を Long にしたため）です」
      * という指定です。
      */
+
+    /**
+     * "isCompleted" フィールドが false の Task をすべて検索する
+     * Spring Data JPAがメソッド名を解析して、自動でSQLを生成してくれます。
+     * (SELECT * FROM task WHERE is_completed = false)
+     */
+    @EntityGraph(attributePaths = {"genre", "deadlines", "relatedUrls", "images"})
+    List<Task> findByIsCompletedFalse();
+
+    @EntityGraph(attributePaths = {"genre", "deadlines", "relatedUrls", "images"})
+    // ★ (アーカイブ画面用に、trueのものも定義しておくと便利)
+    List<Task> findByIsCompletedTrue();
 }

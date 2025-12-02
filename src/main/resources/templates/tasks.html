@@ -3,63 +3,196 @@
 
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>タスク管理</title>
-    <!-- css -->
-    <link rel="stylesheet" th:href="@{/style/style.css}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/styles/styles.css}">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
 </head>
 
+
 <body>
-    <h1>タスク一覧</h1>
 
-    <ul class="task-list">
-        <li th:each="task : ${tasks}" class="task-item">
-            
-            <!-- List（既存タスク） -->
+    <div class="container-fluid">
+        
+        <header class="d-flex justify-content-between align-items-center mb-4">
             <div>
-                <s th:if="${task.completed}">
-                    <span th:text="${task.title}" class="task-title"></span>
-                </s>
-                <span th:if="${!task.completed}" th:text="${task.title}" class="task-title"></span>
-
-                <p th:if="${task.description != null && !task.description.isEmpty()}" th:text="${task.description}" class="task-description">
-                </p>
+                <h1>タスクリスト</h1>
+                <p class="text-muted" th:text="'本日の日付: ' + ${today}"></p>
+                </div>
+            <div>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
+                    + 新規作成
+                </button>
+                <a th:href="@{/archive}" class="btn btn-outline-secondary">アーカイブ</a>
             </div>
-            <div class="task-actions">
+        </header>
+
+        <div id="task-list-area" th:fragment="taskListArea">
+            
+            <div class="task-ticket" th:each="task : ${tasks}">
                 
-                <form th:if="${!task.completed}" th:action="@{/tasks/{id}/complete(id=${task.id})}" method="post">
-                    <button type="submit" class="btn btn-complete">完了</button>
-                </form>
+                <div class="ticket-header">
+                    <div>
+                        <h5 class="mb-0">
+                            <span th:text="'#' + ${task.id}">#1</span>
+                            <span th:text="${task.title}">タスク名</span>
+                        </h5>
+                    </div>
+                    <span th:if="${task.genre != null}" class="badge bg-secondary" th:text="${task.genre.name}">ジャンル</span>
+                </div>
 
-                <form th:action="@{/tasks/{id}/delete(id=${task.id})}" method="post">
-                    <button type="submit" class="btn btn-delete">削除</button>
+                <div class="ticket-body">
+                    <p th:if="${task.description != null && !task.description.isEmpty()}"
+                        th:text="${task.description}"
+                        class="text-muted"
+                        style="white-space: pre-wrap;"></p>
+
+                    <div th:if="${!task.deadlines.isEmpty()}">
+                        <strong>納期:</strong>
+                        <ul class="deadline-list" style="list-style: none; padding-left: 0;">
+                            <li th:each="deadline : ${task.deadlines}" class="d-flex align-items-center mb-1">
+                                
+                                <button type="button" style="border: none; background: none; cursor: pointer; padding: 0; margin-right: 8px;"
+                                        th:hx-post="@{/deadlines/{id}/toggle(id=${deadline.id})}"
+                                        hx-target="#task-list-area"
+                                        hx-swap="outerHTML">
+                                    
+                                    <span th:if="${deadline.isCompleted}" style="color: #28a745; font-size: 1.2em;">☑</span>
+                                    <span th:unless="${deadline.isCompleted}" style="color: #ccc; font-size: 1.2em;">☐</span>
+                                </button>
+
+                                <span th:text="${deadline.name} + ': ' + ${deadline.date}" th:class="${deadline.isCompleted} ? 'text-decoration-line-through text-muted' : ''">
+                                    キー期限: 2025-11-14
+                                </span>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div th:if="${!task.relatedUrls.isEmpty()}">
+                        <strong>関連URL:</strong>
+                        <ul class="url-list">
+                            <li th:each="url : ${task.relatedUrls}">
+                                <a th:href="${url.url}" target="_blank" th:text="${url.name}">Figma</a>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <div th:if="${!task.images.isEmpty()}" class="mt-2">
+                        <strong>添付画像:</strong>
+                        <div class="d-flex flex-wrap gap-2">
+                            <div th:each="image : ${task.images}" class="image-container">
+                                
+                                <a th:href="@{/uploads/{f}(f=${image.filename})}" target="_blank">
+                                    <img th:src="@{/uploads/{f}(f=${image.filename})}"  style="height: 60px; width: auto; border: 1px solid #ddd; border-radius: 4px;"  alt="添付画像">
+                                </a>
+
+                                <button type="button" class="btn-delete-image"
+                                    th:hx-post="@{/images/{id}/delete(id=${image.id})}"
+                                    hx-target="#task-list-area"
+                                    hx-swap="outerHTML"
+                                    hx-confirm="本当にこの画像を削除しますか？">
+                                    ×
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="ticket-footer">
+                    <form th:if="${!task.completed}" th:action="@{/tasks/{id}/complete(id=${task.id})}" method="post" style="display: inline;">
+                        <button type="submit" class="btn btn-sm btn-success">完了 (アーカイブ)</button>
+                    </form>
+                    <a th:href="@{/tasks/{id}/edit(id=${task.id})}" class="btn btn-sm btn-outline-primary">編集</a>
+                    <form th:action="@{/tasks/{id}/delete(id=${task.id})}" method="post" style="display: inline;">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">削除</button>
+                    </form>
+                </div>
+            </div>
+
+            <p th:if="${tasks.isEmpty()}">未完了のタスクはありません。</p>
+
+        </div>
+    </div>
+
+    <div class="modal fade" id="createTaskModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                
+                <div class="modal-header">
+                    <h5 class="modal-title">新規タスク作成</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+
+                <form th:action="@{/tasks/create}" method="post" enctype="multipart/form-data">
+                    
+                    <div class="modal-body">
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">タスク名*</label>
+                                <input type="text" name="title" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">タスクジャンル*</label>
+                                <select name="genreId" class="form-select" required>
+                                    <option value="">選択してください...</option>
+                                    <option th:each="genre : ${allGenres}" 
+                                            th:value="${genre.id}" 
+                                            th:text="${genre.name}">
+                                        デザイン
+                                    </option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">タスク概要 (メモ)</label>
+                            <textarea name="description" rows="3" class="form-control"></textarea>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <h6>納期</h6>
+                            <div id="deadline-inputs">
+                                </div>
+                            <button type="button" id="add-deadline" class="btn btn-sm btn-outline-secondary">+ 納期を追加</button>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <h6>関連URL</h6>
+                            <div id="url-inputs">
+                                </div>
+                            <button type="button" id="add-url" class="btn btn-sm btn-outline-secondary">+ URLを追加</button>
+                        </div>
+
+                        <hr>
+
+                        <div class="mb-3">
+                            <h6>画像添付</h6>
+                            <input type="file" name="imageFiles" class="form-control" multiple accept="image/*">
+                        </div>
+
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
+                        <button type="submit" class="btn btn-primary">タスクを作成</button>
+                    </div>
+
+                    
                 </form>
 
             </div>
-
-        </li>
-    </ul>
-
-    <p th:if="${tasks.isEmpty()}">
-        タスクはまだありません。
-    </p>
-
-    <hr>
-    <h2>新しいタスクの追加</h2>
-
-    <form th:action="@{/tasks/create}" method="post" class="form-add">
-        <div>
-            <label>タスク名:</label>
-            <input type="text" name="title" required>
         </div>
-        <div>
-            <label>メモ:</label>
-            <textarea name="description" rows="3" cols="40"></textarea>
-        </div>
-        <button type="submit" class="btn">追加</button>
-    </form>
+    </div>
 
-    <!-- js -->
+    <!-- additinal js -->
     <script th:src="@{/js/main.js}"></script>
-</body>
-
+    <!-- ライブラリ -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    </body>
 </html>

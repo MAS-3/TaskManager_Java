@@ -1,6 +1,8 @@
+/* === body と h1/h2 === */
 body {
     font-family: sans-serif;
-    margin: 2em;
+    /* margin: 2em; (Bootstrapの .container-fluid が制御) */
+    padding: 20px; /* body全体に余白 */
     background-color: #f4f4f4;
 }
 
@@ -9,73 +11,82 @@ h2 {
     color: #333;
 }
 
-.task-list {
-    list-style: none;
-    padding: 0;
-}
-
-.task-item {
-    background-color: #fff;
-    margin-bottom: 10px;
+/* === タスクチケットのスタイル === */
+.task-ticket {
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 15px;
     padding: 15px;
-    border-radius: 5px;
-    display: flex;
-    /* 横並びにする */
-    justify-content: space-between;
-    /* 両端に寄せる */
-    align-items: center;
-    /* 中央揃え */
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    background-color: #fff; /* .task-item から移動 */
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* .task-item から移動 */
 }
 
+.ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.ticket-body {
+    margin-top: 10px;
+}
+
+.ticket-footer {
+    margin-top: 15px;
+    text-align: right;
+}
+
+/* === チケット内の詳細 === */
 .task-title {
     font-size: 1.2em;
 }
 
-.task-item s {
-    /* 完了済みのタスク (打ち消し線) */
-    color: #888;
+.task-description { /* (tasks.html に追加した p タグ用) */
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 5px;
+    padding-left: 10px;
+    border-left: 3px solid #eee;
 }
 
-.task-actions form {
+.deadline-list,
+.url-list {
+    font-size: 0.9em;
+    padding-left: 20px;
+    margin-bottom: 5px;
+}
+
+/* --- 画像削除ボタン用 --- */
+
+/* 画像とボタンを囲むラッパー */
+.image-container {
+    position: relative; /* 子要素(ボタン)を絶対配置するために必要 */
     display: inline-block;
-    /* フォームを横並びにする */
-    margin-left: 10px;
 }
 
-.btn {
-    padding: 5px 10px;
-    border: none;
-    border-radius: 3px;
+/* 削除ボタン (Xマーク) */
+.btn-delete-image {
+    position: absolute; /* 親要素の右上に固定 */
+    top: -8px;
+    right: -8px;
+    
+    background-color: red;
+    color: white;
+    border: 2px solid white;
+    border-radius: 50%; /* 丸くする */
+    
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    line-height: 20px; /* 文字を上下中央に */
+    text-align: center;
+    
     cursor: pointer;
-    color: white;
+    padding: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    z-index: 10; /* 画像より手前に表示 */
 }
 
-.btn-complete {
-    background-color: #28a745;
-}
-
-/* 緑 */
-.btn-delete {
-    background-color: #dc3545;
-}
-
-/* 赤 */
-
-.form-add {
-    background-color: #fff;
-    padding: 20px;
-    border-radius: 5px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.form-add input[type="text"] {
-    padding: 8px;
-    width: 250px;
-}
-
-.form-add button {
-    background-color: #007bff;
-    color: white;
-    padding: 8px 12px;
+.btn-delete-image:hover {
+    background-color: darkred;
 }

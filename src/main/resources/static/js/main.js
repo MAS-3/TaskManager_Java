@@ -14,13 +14,62 @@
  */
 window.addEventListener("DOMContentLoaded", (event) => {
   
-  // (3) 動作確認用のログ
-  // ブラウザの「開発者ツール(F12)」の「コンソール」に
-  // このメッセージが出れば、JSが正しく読み込まれています。
-//   console.log("main.js loaded!");
+  // ページ（DOM）が読み込まれたら実行
 
-  // --- 将来、ここから下にコードを書いていきます ---
-  // 例: const deleteButtons = document.querySelectorAll(".btn-delete");
-  // deleteButtons.forEach(button => { ... });
+    // --- 納期(Deadline)の「+」ボタン処理 ---
+    document.getElementById("add-deadline").addEventListener("click", function() {
+        const container = document.getElementById("deadline-inputs");
+        
+        // (A) 新しい入力欄（div）を作成
+        const newRow = document.createElement("div");
+        newRow.className = "row mb-2"; // BootstrapのCSS
+        
+        // (B) ★ name="deadlineName" と name="deadlineDate" でHTMLを作成
+        //    (これがコントローラの List<String> deadlineNames に対応する)
+        newRow.innerHTML = `
+            <div class="col-5">
+                <input type="text" name="deadlineName" class="form-control" placeholder="期限名 (例: キー期限)">
+            </div>
+            <div class="col-5">
+                <input type="date" name="deadlineDate" class="form-control">
+            </div>
+            <div class="col-2">
+                <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
+            </div>
+        `;
+        container.appendChild(newRow);
+    });
+
+    // --- 関連URLの「+」ボタン処理 ---
+    document.getElementById("add-url").addEventListener("click", function() {
+        const container = document.getElementById("url-inputs");
+        
+        // (A) 新しい入力欄（div）を作成
+        const newRow = document.createElement("div");
+        newRow.className = "row mb-2";
+        
+        // (B) ★ name="urlName" と name="urlLink" でHTMLを作成
+        newRow.innerHTML = `
+            <div class="col-5">
+                <input type="text" name="urlName" class="form-control" placeholder="URL名 (例: Figma)">
+            </div>
+            <div class="col-5">
+                <input type="text" name="urlLink" class="form-control" placeholder="http://...">
+            </div>
+            <div class="col-2">
+                <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
+            </div>
+        `;
+        container.appendChild(newRow);
+    });
+
+    // --- 共通の「削除」ボタン処理 ---
+    // (document全体で "remove-row" クラスのクリックを監視)
+    document.addEventListener("click", function(e) {
+        if (e.target && e.target.classList.contains("remove-row")) {
+            // クリックされたボタンの親の親（div.row）を削除
+            e.target.closest(".row").remove();
+        }
+    });
 
 });
