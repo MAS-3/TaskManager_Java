@@ -11,8 +11,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.CascadeType;
 import java.time.LocalDateTime;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Set;
+import java.util.LinkedHashSet;
 
 /**
  * (1) @Entity
@@ -81,14 +81,14 @@ public class Task {
      * orphanRemoval = true: TaskとDeadlineの関連が切れたら、DeadlineもDBから削除
      */
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Deadline> deadlines = new ArrayList<>();
+    private Set<Deadline> deadlines = new LinkedHashSet<>();
 
     /**
      * 関連URLとの関連
      * @OneToMany : 「1対多」の関係 (Task 1 : N RelatedURL)
      */
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<RelatedURL> relatedUrls = new ArrayList<>();
+    private Set<RelatedURL> relatedUrls = new LinkedHashSet<>();
 
     /**
      * (6) 引数なしのコンストラクタ
@@ -150,17 +150,16 @@ public class Task {
         this.genre = genre;
     }
 
-    public List<Deadline> getDeadlines() {
+    public Set<Deadline> getDeadlines() {
         return deadlines;
     }
-    public void setDeadlines(List<Deadline> deadlines) {
+    public void setDeadlines(Set<Deadline> deadlines) {
         this.deadlines = deadlines;
     }
-
-    public List<RelatedURL> getRelatedUrls() {
+    public Set<RelatedURL> getRelatedUrls() {
         return relatedUrls;
     }
-    public void setRelatedUrls(List<RelatedURL> relatedUrls) {
+    public void setRelatedUrls(Set<RelatedURL> relatedUrls) {
         this.relatedUrls = relatedUrls;
     }
 
