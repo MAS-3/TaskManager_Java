@@ -32,10 +32,10 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
      * Spring Data JPAがメソッド名を解析して、自動でSQLを生成してくれます。
      * (SELECT * FROM task WHERE is_completed = false)
      */
-    @EntityGraph(attributePaths = {"genre", "deadlines", "relatedUrls"})
+    @EntityGraph(attributePaths = {"genre", "deadlines", "relatedUrls", "images"})
     List<Task> findByIsCompletedFalse();
 
-    @EntityGraph(attributePaths = {"genre", "deadlines", "relatedUrls"})
+    @EntityGraph(attributePaths = {"genre", "deadlines", "relatedUrls", "images"})
     // ★ (アーカイブ画面用に、trueのものも定義しておくと便利)
     List<Task> findByIsCompletedTrue();
 }

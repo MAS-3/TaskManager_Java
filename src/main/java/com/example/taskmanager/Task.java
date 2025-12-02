@@ -105,9 +105,10 @@ public class Task {
     }
 
     /**
-     * 各フィールドの Getter と Setter
+     * 各フィールドの Getter と Setter（データベースとのやり取り窓口）
      */
     
+    // タスクのID
     public Long getId() {
         return id;
     }
@@ -115,6 +116,7 @@ public class Task {
         this.id = id;
     }
 
+    // タスクタイトル
     public String getTitle() {
         return title;
     }
@@ -122,6 +124,7 @@ public class Task {
         this.title = title;
     }
 
+    // タスク完了ステータス
     public boolean isCompleted() {
         return isCompleted;
     }
@@ -129,6 +132,7 @@ public class Task {
         this.isCompleted = completed;
     }
 
+    //概要欄
     public String getDescription() {
         return description;
     }
@@ -136,6 +140,7 @@ public class Task {
         this.description = description;
     }
 
+    //完了タスク（アーカイブ用）
     public LocalDateTime getCompletedAt() {
         return completedAt;
     }
@@ -143,6 +148,7 @@ public class Task {
         this.completedAt = completedAt;
     }
 
+    // ジャンル
     public Genre getGenre() {
         return genre;
     }
@@ -150,18 +156,42 @@ public class Task {
         this.genre = genre;
     }
 
+    //納期
     public Set<Deadline> getDeadlines() {
         return deadlines;
     }
     public void setDeadlines(Set<Deadline> deadlines) {
         this.deadlines = deadlines;
     }
+
+    // 関連URL
     public Set<RelatedURL> getRelatedUrls() {
         return relatedUrls;
     }
     public void setRelatedUrls(Set<RelatedURL> relatedUrls) {
         this.relatedUrls = relatedUrls;
     }
+
+    /**
+     * 画像とのリレーション
+     */
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TaskImage> images = new LinkedHashSet<>();
+
+    // ... (Getter/Setter) ...
+
+    // 画像
+    public Set<TaskImage> getImages() {
+        return images;
+    }
+    public void setImages(Set<TaskImage> images) {
+        this.images = images;
+    }
+    public void addImage(TaskImage image) {
+        this.images.add(image);
+        image.setTask(this);
+    }
+
 
     /**
      * 関連（Deadline, RelatedURL）を簡単に追加するための便利メソッド

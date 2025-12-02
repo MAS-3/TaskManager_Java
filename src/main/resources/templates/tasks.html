@@ -74,6 +74,21 @@
                             </li>
                         </ul>
                     </div>
+
+                    <div th:if="${!task.images.isEmpty()}" class="mt-2">
+                        <strong>添付画像:</strong>
+                        <div class="d-flex flex-wrap gap-2">
+                            <div th:each="image : ${task.images}" class="image-container">
+                                
+                                <a th:href="@{/uploads/{f}(f=${image.filename})}" target="_blank">
+                                    <img th:src="@{/uploads/{f}(f=${image.filename})}"  style="height: 60px; width: auto; border: 1px solid #ddd; border-radius: 4px;"  alt="添付画像">
+                                </a>
+
+                                <button type="button" class="btn-delete-image" th:hx-post="@{/images/{id}/delete(id=${image.id})}" hx-target="#task-list-area" hx-swap="outerHTML" hx-confirm="本当にこの画像を削除しますか？">×</button>
+                            </div>
+                        </div>
+                    </div>
+
                 </div>
 
                 <div class="ticket-footer">
@@ -101,7 +116,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
 
-                <form th:action="@{/tasks/create}" method="post">
+                <form th:action="@{/tasks/create}" method="post" enctype="multipart/form-data">
                     
                     <div class="modal-body">
                         
@@ -146,11 +161,20 @@
                             <button type="button" id="add-url" class="btn btn-sm btn-outline-secondary">+ URLを追加</button>
                         </div>
 
+                        <hr>
+
+                        <div class="mb-3">
+                            <h6>画像添付</h6>
+                            <input type="file" name="imageFiles" class="form-control" multiple accept="image/*">
+                        </div>
+
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">閉じる</button>
                         <button type="submit" class="btn btn-primary">タスクを作成</button>
                     </div>
+
+                    
                 </form>
 
             </div>

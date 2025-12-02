@@ -55,3 +55,38 @@ h2 {
     padding-left: 20px;
     margin-bottom: 5px;
 }
+
+/* --- 画像削除ボタン用 --- */
+
+/* 画像とボタンを囲むラッパー */
+.image-container {
+    position: relative; /* 子要素(ボタン)を絶対配置するために必要 */
+    display: inline-block;
+}
+
+/* 削除ボタン (Xマーク) */
+.btn-delete-image {
+    position: absolute; /* 親要素の右上に固定 */
+    top: -8px;
+    right: -8px;
+    
+    background-color: red;
+    color: white;
+    border: 2px solid white;
+    border-radius: 50%; /* 丸くする */
+    
+    width: 24px;
+    height: 24px;
+    font-size: 14px;
+    line-height: 20px; /* 文字を上下中央に */
+    text-align: center;
+    
+    cursor: pointer;
+    padding: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    z-index: 10; /* 画像より手前に表示 */
+}
+
+.btn-delete-image:hover {
+    background-color: darkred;
+}

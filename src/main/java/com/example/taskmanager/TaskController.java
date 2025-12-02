@@ -11,6 +11,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Comparator;
+import org.springframework.web.multipart.MultipartFile; // ファイル受け取り用
+import java.nio.file.Files;   // ファイル書き込み用
+import java.nio.file.Path;    // パス操作用
+import java.nio.file.Paths;   // パス操作用
+import java.util.UUID;        // ユニークなファイル名生成用
+import java.io.IOException;   // エラー処理用
+
 
 /**
  * ========================================
@@ -42,6 +49,15 @@ public class TaskController {
 
     @Autowired
     private RelatedURLRepository relatedURLRepository;
+
+    @Autowired
+    private TaskImageRepository taskImageRepository;
+
+
+    @GetMapping("/")
+    public String index() {
+        return "redirect:/tasks";
+    }
 
     /**
      * (3) @GetMapping("/tasks")
@@ -83,18 +99,21 @@ public class TaskController {
     @PostMapping("/tasks/create")
     public String createTask(
         // createTaskメソッドの引数
-        // (A) 基本情報を受け取る
+        // 基本情報を受け取る
         @RequestParam("title") String title,
         @RequestParam("description") String description,
         @RequestParam("genreId") Long genreId,
 
-        // (B) ★「複数の」納期 (配列として受け取る)
+        //「複数の」納期 (配列として受け取る)
         @RequestParam(value = "deadlineName", required = false) List<String> deadlineNames,
         @RequestParam(value = "deadlineDate", required = false) List<String> deadlineDates,
 
-        // (C) ★「複数の」関連URL (配列として受け取る)
+        //「複数の」関連URL (配列として受け取る)
         @RequestParam(value = "urlName", required = false) List<String> urlNames,
-        @RequestParam(value = "urlLink", required = false) List<String> urlLinks
+        @RequestParam(value = "urlLink", required = false) List<String> urlLinks,
+
+        // 画像ファイルを受け取る (name="imageFiles")
+        @RequestParam(value = "imageFiles", required = false) List<MultipartFile> imageFiles
     ) {
         // (2) @RequestParam("title") String title
         // フォームから送られてきた name="title" のデータを、
@@ -109,7 +128,7 @@ public class TaskController {
             newTask.setGenre(genre);//ジャンルをセット
         });
 
-        // 納期入力の処理
+        // --- 納期入力の処理 ---
         if (deadlineNames != null && deadlineDates != null) {
             for (int i = 0; i < deadlineNames.size(); i++) {
 
@@ -127,7 +146,7 @@ public class TaskController {
             }
         };
 
-        // (4) 関連URL入力の処理
+        // --- 関連URL入力の処理 ---
         if (urlNames != null && urlLinks != null) {
             for (int i = 0; i < urlNames.size(); i++) {
                 // ★【安全装置】リンク先リストが名前リストより短い場合、ループを抜ける
@@ -143,11 +162,23 @@ public class TaskController {
             }
         };
 
+        // --- 画像の保存処理 ---
+        if (imageFiles != null) {
+            for (MultipartFile file : imageFiles) {
+                // さっき作った便利メソッドで保存
+                String storedFilename = saveImageFile(file);
+                
+                if (storedFilename != null) {
+                    // DBに保存するための TaskImage エンティティを作成
+                    TaskImage taskImage = new TaskImage(storedFilename, file.getOriginalFilename());
+                    newTask.addImage(taskImage); // Taskに関連付け
+                }
+            }
+        }
 
         // セットしたもの一式を保存
         taskRepository.save(newTask);
-
-        // (5) 処理が終わったら、タスク一覧ページ ("/tasks") にリダイレクト（再表示）
+        // タスク一覧ページ ("/tasks") にリダイレクト（再表示）
         return "redirect:/tasks";
     }
 
@@ -211,28 +242,33 @@ public class TaskController {
     public String updateTask(
             @PathVariable("id") Long id, // (A) どのタスクを更新するか (URLからID取得)
 
-            // (B) フォームから送られてくる基本情報
+            // フォームから送られてくる基本情報
             @RequestParam("title") String title,
             @RequestParam("description") String description,
             @RequestParam("genreId") Long genreId,
 
-            // (C) ★「複数の」納期 (配列として受け取る)
+            // 「複数の」納期 (配列として受け取る)
             @RequestParam(value = "deadlineName", required = false) List<String> deadlineNames,
             @RequestParam(value = "deadlineDate", required = false) List<String> deadlineDates,
 
-            // (D) ★「複数の」関連URL (配列として受け取る)
+            // 「複数の」関連URL (配列として受け取る)
             @RequestParam(value = "urlName", required = false) List<String> urlNames,
-            @RequestParam(value = "urlLink", required = false) List<String> urlLinks
+            @RequestParam(value = "urlLink", required = false) List<String> urlLinks,
+
+            //画像の保存
+            @RequestParam(value = "imageFiles", required = false) List<MultipartFile> imageFiles
     ) {
 
-        // (1) まず、更新対象のタスクをDBから探す
+        // (1)更新対象のタスクをDBから探す
         var taskOpt = taskRepository.findById(id);
 
+        // もしタスクが見つからなければ、何もせず一覧に戻る
         if (taskOpt.isEmpty()) {
-            return "redirect:/tasks";// もしタスクが見つからなければ、何もせず一覧に戻る
+            return "redirect:/tasks";
         }
 
-        Task taskToUpdate = taskOpt.get(); // (2) 更新するタスク本体を取り出す
+        // (2) 更新するタスク本体を取り出す
+        Task taskToUpdate = taskOpt.get(); 
 
         // (3) 基本情報を上書きセット
         taskToUpdate.setTitle(title);
@@ -277,6 +313,17 @@ public class TaskController {
                     url.setName(urlNames.get(i));
                     url.setUrl(urlLinks.get(i));
                     taskToUpdate.addRelatedURL(url); // 新しいURLとして追加
+                }
+            }
+        }
+
+        // --- 画像の追加処理 (既存の画像は消さずに、追加だけする仕様にします) ---
+        if (imageFiles != null) {
+            for (MultipartFile file : imageFiles) {
+                String storedFilename = saveImageFile(file);
+                if (storedFilename != null) {
+                    TaskImage taskImage = new TaskImage(storedFilename, file.getOriginalFilename());
+                    taskToUpdate.addImage(taskImage); // 既存のリストに追加
                 }
             }
         }
@@ -366,5 +413,66 @@ public class TaskController {
         
         model.addAttribute("tasks", tasks);
         // (ジャンル一覧などはリスト更新だけなら不要なので省略可ですが、念のため入れてもOK)
+    }
+
+    /**
+     * 画像ファイルを保存し、保存されたファイル名を返す
+     */
+    private String saveImageFile(MultipartFile file) {
+        if (file.isEmpty()) {
+            return null;
+        }
+
+        try {
+            // (1) 保存先ディレクトリ (/data/uploads) を作成
+            //     Dockerのボリウムマウント先(/data)の下に作るので、消えません。
+            Path uploadDir = Paths.get("/data/uploads");
+            if (!Files.exists(uploadDir)) {
+                Files.createDirectories(uploadDir);
+            }
+
+            // (2) ファイル名が被らないように UUID をつける
+            //     (例: "my-image.png" -> "a0eebc99-9c0b..._my-image.png")
+            String originalFilename = file.getOriginalFilename();
+            String storedFilename = UUID.randomUUID().toString() + "_" + originalFilename;
+
+            // (3) ファイルを保存
+            Path destinationPath = uploadDir.resolve(storedFilename);
+            Files.copy(file.getInputStream(), destinationPath);
+
+            return storedFilename; // 保存したファイル名を返す
+
+        } catch (IOException e) {
+            e.printStackTrace(); // エラー時はログに出す
+            return null;
+        }
+    }
+
+    /**
+     * (13) ★画像の削除処理 (HTMX対応)
+     * (POST /images/{id}/delete)
+     * ファイルシステムからファイルを消し、DBからも削除します。
+     */
+    @PostMapping("/images/{id}/delete")
+    public String deleteImage(@PathVariable("id") Long id, Model model) {
+        
+        // IDから画像データを検索
+        taskImageRepository.findById(id).ifPresent(image -> {
+            
+            // (A) 実際のファイルを削除 (try-catchで安全に)
+            try {
+                Path filePath = Paths.get("/data/uploads").resolve(image.getFilename());
+                Files.deleteIfExists(filePath); // ファイルがあれば消す
+            } catch (IOException e) {
+                e.printStackTrace(); // エラーならログに出すだけで処理は続ける
+            }
+
+            // (B) データベースから削除
+            taskImageRepository.delete(image);
+        });
+
+        // (C) 最新のタスク一覧を取得して画面を更新 (HTMX)
+        loadTaskData(model);
+        return "tasks :: taskListArea";
     }
 }
