@@ -31,7 +31,10 @@
                     <span th:if="${task.genre != null}" class="badge bg-secondary" th:text="${task.genre.name}">ジャンル</span>
                 </div>
 
-                <div class="ticket-body text-muted"> <p th:if="${task.description != null}" th:text="${task.description}"></p>
+                <div class="ticket-body text-muted">
+                    <p th:if="${task.description != null}"
+                        th:text="${task.description}"
+                        style="white-space: pre-wrap;"></p>
                     <small>完了日: <span th:text="${#temporals.format(task.completedAt, 'yyyy-MM-dd HH:mm')}"></span></small>
                 </div>
 

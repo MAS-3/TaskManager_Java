@@ -43,7 +43,10 @@
                 </div>
 
                 <div class="ticket-body">
-                    <p th:if="${task.description != null && !task.description.isEmpty()}" th:text="${task.description}" class="text-muted"></p>
+                    <p th:if="${task.description != null && !task.description.isEmpty()}"
+                        th:text="${task.description}"
+                        class="text-muted"
+                        style="white-space: pre-wrap;"></p>
 
                     <div th:if="${!task.deadlines.isEmpty()}">
                         <strong>納期:</strong>
@@ -84,7 +87,13 @@
                                     <img th:src="@{/uploads/{f}(f=${image.filename})}"  style="height: 60px; width: auto; border: 1px solid #ddd; border-radius: 4px;"  alt="添付画像">
                                 </a>
 
-                                <button type="button" class="btn-delete-image" th:hx-post="@{/images/{id}/delete(id=${image.id})}" hx-target="#task-list-area" hx-swap="outerHTML" hx-confirm="本当にこの画像を削除しますか？">×</button>
+                                <button type="button" class="btn-delete-image"
+                                    th:hx-post="@{/images/{id}/delete(id=${image.id})}"
+                                    hx-target="#task-list-area"
+                                    hx-swap="outerHTML"
+                                    hx-confirm="本当にこの画像を削除しますか？">
+                                    ×
+                                </button>
                             </div>
                         </div>
                     </div>
