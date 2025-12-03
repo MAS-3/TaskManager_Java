@@ -1,29 +1,22 @@
-/**
- * main.js
- */
 "use strict";
 
 window.addEventListener("DOMContentLoaded", (event) => {
 
-    // --- 納期(Deadline)の「+」ボタン処理 ---
-    const addDeadlineBtn = document.getElementById("add-deadline");
-    if (addDeadlineBtn) {
-        addDeadlineBtn.addEventListener("click", function() {
-            const container = document.getElementById("deadline-inputs");
+    // --- ★変更: 工程(Process)の「+」ボタン処理 ---
+    const addProcessBtn = document.getElementById("add-process"); // ID変更
+    if (addProcessBtn) {
+        addProcessBtn.addEventListener("click", function() {
+            const container = document.getElementById("process-inputs"); // ID変更
             
-            // ★自動入力ロジック: 直前の行の終了日を探す
             let defaultStartDate = "";
-            
-            // 1. もし既に納期行があるなら、最後の行の終了日を取得
             const lastRow = container.lastElementChild;
             if (lastRow) {
-                // 直前の行の「終了日(deadlineEndDate)」を探す
-                const lastEndDateInput = lastRow.querySelector('input[name="deadlineEndDate"]');
+                // name変更: processEndDate
+                const lastEndDateInput = lastRow.querySelector('input[name="processEndDate"]');
                 if (lastEndDateInput && lastEndDateInput.value) {
                     defaultStartDate = lastEndDateInput.value;
                 }
             }
-            // 2. もし納期がまだなくて、タスク自体の開始日が入力されていたら、それを使う
             if (!defaultStartDate) {
                 const taskStartDateInput = document.querySelector('input[name="startDate"]');
                 if (taskStartDateInput && taskStartDateInput.value) {
@@ -34,17 +27,16 @@ window.addEventListener("DOMContentLoaded", (event) => {
             const newRow = document.createElement("div");
             newRow.className = "row mb-2"; 
             
-            // ★ここが重要！ name属性をコントローラに合わせる
-            // deadlineStartDate と deadlineEndDate の2つを作る
+            // ★name属性変更: processName, processStartDate, processEndDate
             newRow.innerHTML = `
                 <div class="col-4">
-                    <input type="text" name="deadlineName" class="form-control" placeholder="工程名">
+                    <input type="text" name="processName" class="form-control" placeholder="工程名">
                 </div>
                 <div class="col-3">
-                    <input type="date" name="deadlineStartDate" class="form-control" value="${defaultStartDate}" title="開始日">
+                    <input type="date" name="processStartDate" class="form-control" value="${defaultStartDate}" title="開始日">
                 </div>
                 <div class="col-3">
-                    <input type="date" name="deadlineEndDate" class="form-control" title="終了日">
+                    <input type="date" name="processEndDate" class="form-control" title="終了日">
                 </div>
                 <div class="col-2">
                     <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
@@ -54,7 +46,7 @@ window.addEventListener("DOMContentLoaded", (event) => {
         });
     }
 
-    // --- 関連URLの「+」ボタン処理 ---
+    // --- 関連URL (変更なし) ---
     const addUrlBtn = document.getElementById("add-url");
     if (addUrlBtn) {
         addUrlBtn.addEventListener("click", function() {
@@ -76,14 +68,14 @@ window.addEventListener("DOMContentLoaded", (event) => {
         });
     }
 
-    // --- 共通の「削除」ボタン処理 ---
+    // --- 削除ボタン (変更なし) ---
     document.addEventListener("click", function(e) {
         if (e.target && e.target.classList.contains("remove-row")) {
             e.target.closest(".row").remove();
         }
     });
 
-    // --- ガントチャート処理 (Google Charts) ---
+    // --- ガントチャート (変更なし) ---
     google.charts.load('current', {'packages':['gantt']});
     google.charts.setOnLoadCallback(drawChart);
 
@@ -100,34 +92,20 @@ window.addEventListener("DOMContentLoaded", (event) => {
         data.addColumn('string', 'Dependencies');
 
         const rows = [];
-        
         tasksData.forEach(t => {
             if (!t.start || !t.end) return;
-            // 異常値除外 (9999年など)
             if (t.end.indexOf("9999") !== -1) return;
-
             const startDate = new Date(t.start);
             const endDate = new Date(t.end);
-
-            if (endDate < startDate) {
-                endDate.setDate(startDate.getDate());
-            }
-
-            rows.push([
-                t.id, t.name, 'Task',
-                startDate, endDate, null, t.progress, null
-            ]);
+            if (endDate < startDate) endDate.setDate(startDate.getDate());
+            rows.push([ t.id, t.name, 'Task', startDate, endDate, null, t.progress, null ]);
         });
 
         if (rows.length > 0) {
             data.addRows(rows);
             const options = {
                 height: rows.length * 42 + 50,
-                gantt: {
-                    trackHeight: 30,
-                    barCornerRadius: 4,
-                    backgroundColor: { fill: '#fff' }
-                }
+                gantt: { trackHeight: 30, barCornerRadius: 4, backgroundColor: { fill: '#fff' } }
             };
             const chart = new google.visualization.Gantt(document.getElementById('gantt-chart'));
             chart.draw(data, options);
