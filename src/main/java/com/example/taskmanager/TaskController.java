@@ -19,12 +19,10 @@ public class TaskController {
     @Autowired private TaskRepository taskRepository;
     @Autowired private GenreRepository genreRepository;
     @Autowired private RelatedURLRepository relatedURLRepository;
+    @Autowired private TaskProcessRepository taskProcessRepository;
     @Autowired private TaskImageRepository taskImageRepository;
     
     
-    // ★変更: DeadlineRepository -> TaskProcessRepository
-    @Autowired private TaskProcessRepository taskProcessRepository;
-
     // --- 共通処理 ---
     private void loadTaskData(Model model) {
         var tasks = taskRepository.findByIsCompletedFalse();
@@ -44,34 +42,47 @@ public class TaskController {
         return "tasks";
     }
 
+    // タスク作成
     @PostMapping("/tasks/create")
     public String createTask(
+            //引数
+            //タイトル
             @RequestParam("title") String title,
+            //概要
             @RequestParam("description") String description,
+            //ジャンル(id)
             @RequestParam("genreId") Long genreId,
+            //タスクの開始日、終了日
             @RequestParam(value = "startDate", required = false) LocalDate startDate,
-
-            // 名前、開始日、終了日
+            @RequestParam(value = "endDate", required = false) LocalDate endDate,
+            //工程の名前、開始日、終了日
             @RequestParam(value = "processName", required = false) List<String> processNames,
             @RequestParam(value = "processStartDate", required = false) List<String> processStartDates,
             @RequestParam(value = "processEndDate", required = false) List<String> processEndDates,
-
+            //関連URLの名前、URL
             @RequestParam(value = "urlName", required = false) List<String> urlNames,
             @RequestParam(value = "urlLink", required = false) List<String> urlLinks,
+            //画像
             @RequestParam(value = "imageFiles", required = false) List<MultipartFile> imageFiles
     ) {
+        // コンストラクタ作成(初期化)
         Task newTask = new Task(title);
+        //概要をセット
         newTask.setDescription(description);
+        // タスクの開始日、終了日をセット
         newTask.setStartDate(startDate);
-
+        newTask.setEndDate(endDate);
+        // ジャンルと紐付けするidをセット
         genreRepository.findById(genreId).ifPresent(newTask::setGenre);
 
-        // ★変更: 工程(Process)の処理
+        // 工程(Process)の処理
         if (processNames != null && processStartDates != null && processEndDates != null) {
             for (int i = 0; i < processNames.size(); i++) {
+                //工程の日付が入力されていなかった場合にエラーが出るので、エスケープ対策
                 if (i >= processStartDates.size() || i >= processEndDates.size()) break;
-                if (!processNames.get(i).isEmpty() && !processEndDates.get(i).isEmpty()) {
-                    
+
+                if (!processNames.get(i).isEmpty() && !processEndDates.get(i).isEmpty()) {//肯定名、日付が入力されていたら
+                    //工程のコンストラクタ生成
                     TaskProcess process = new TaskProcess();
                     process.setName(processNames.get(i));
                     if (!processStartDates.get(i).isEmpty()) {
@@ -79,7 +90,7 @@ public class TaskController {
                     }
                     process.setEndDate(LocalDate.parse(processEndDates.get(i)));
                     
-                    newTask.addProcess(process); // ★変更
+                    newTask.addProcess(process);
                 }
             }
         }
@@ -109,8 +120,6 @@ public class TaskController {
         return "redirect:/tasks";
     }
 
-    // ... (completeTask, editTaskForm はほぼそのまま) ...
-
     @PostMapping("/tasks/{id}/complete")
     public String completeTask(@PathVariable("id") Long id) {
         taskRepository.findById(id).ifPresent(task -> {
@@ -139,7 +148,7 @@ public class TaskController {
             @RequestParam("description") String description,
             @RequestParam("genreId") Long genreId,
             @RequestParam(value = "startDate", required = false) LocalDate startDate,
-
+            @RequestParam(value = "endDate", required = false) LocalDate endDate,
             // ★変更: process...
             @RequestParam(value = "processName", required = false) List<String> processNames,
             @RequestParam(value = "processStartDate", required = false) List<String> processStartDates,
@@ -156,14 +165,14 @@ public class TaskController {
         taskToUpdate.setTitle(title);
         taskToUpdate.setDescription(description);
         taskToUpdate.setStartDate(startDate);
+        taskToUpdate.setEndDate(endDate);
 
         genreRepository.findById(genreId).ifPresent(taskToUpdate::setGenre);
 
-        // ★変更: processes をクリア
         taskToUpdate.getProcesses().clear();
         taskToUpdate.getRelatedUrls().clear();
 
-        // ★変更: 工程(Process)の処理
+        // 工程(Process)の処理
         if (processNames != null && processStartDates != null && processEndDates != null) {
             for (int i = 0; i < processNames.size(); i++) {
                 if (i >= processStartDates.size() || i >= processEndDates.size()) break;
@@ -173,6 +182,7 @@ public class TaskController {
                     process.setName(processNames.get(i));
                     if (!processStartDates.get(i).isEmpty()) {
                         process.setStartDate(LocalDate.parse(processStartDates.get(i)));
+                        
                     }
                     process.setEndDate(LocalDate.parse(processEndDates.get(i)));
                     

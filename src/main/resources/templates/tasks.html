@@ -141,9 +141,15 @@
                             <textarea name="description" rows="3" class="form-control"></textarea>
                         </div>
                         <hr>
-                        <div class="mb-3">
-                            <label class="form-label">開始日</label>
-                            <input type="date" name="startDate" class="form-control" required>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">開始日</label>
+                                <input type="date" name="startDate" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">終了日 (納期)</label>
+                                <input type="date" name="endDate" class="form-control">
+                            </div>
                         </div>
 
                         <div class="mb-3">
@@ -184,8 +190,10 @@
                 id: "Task-" + /*[[${task.id}]]*/ '1',
                 name: /*[[${task.title}]]*/ 'Task Name',
                 start: /*[[${task.startDate}]]*/ '2023-01-01',
-                end: /*[[${task.sortDate}]]*/ '2023-01-05', // ★変更: getEarliestDeadlineDate -> sortDate
+                end: /*[[${task.endDate}]]*/ '2023-01-05',
                 progress: /*[[${task.isCompleted ? 100 : 0}]]*/ 0,
+                
+                // ★修正: ここに工程リストを追加
                 processes: [
                     /*[# th:each="proc : ${task.processes}"]*/
                     {
@@ -200,7 +208,6 @@
             },
             /*[/]*/
         ];
-        /*]]>*/
     </script>
     <script th:src="@{/js/main.js?v=6}"></script>
 </body>

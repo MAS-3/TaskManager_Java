@@ -93,25 +93,23 @@ window.addEventListener("DOMContentLoaded", (event) => {
         const rows = [];
         
         tasksData.forEach(t => {
-            // 1. 親タスクの期間計算
             // 親タスクの日付計算
             let pStartStr = t.start;
-            let pEndStr = null; // 親の終了日は一旦無視
+            let pEndStr = t.end; // ★まずはタスク自身の終了日を採用
 
-            // 子工程がある場合、その全範囲を親の期間とする
+            // 子工程がある場合
             if (t.processes && t.processes.length > 0) {
                 const validChildren = t.processes.filter(p => p.start && p.end);
                 
                 if (validChildren.length > 0) {
-                    // 子の中で一番早い開始日を探す
-                    const earliestChildStart = validChildren.reduce((min, p) => p.start < min ? p.start : min, validChildren[0].start);
-                    
-                    // 子の中で一番遅い終了日を探す
-                    const latestChildEnd = validChildren.reduce((max, p) => p.end > max ? p.end : max, validChildren[0].end);
-
-                    // ★修正: 子工程があるなら、親の開始日・終了日を強制的に上書きする
-                    pStartStr = earliestChildStart;
-                    pEndStr = latestChildEnd;
+                    // 開始日がなければ子から補完
+                    if (!pStartStr) {
+                        pStartStr = validChildren.reduce((min, p) => p.start < min ? p.start : min, validChildren[0].start);
+                    }
+                    // ★終了日がなければ子から補完 (あればそのまま)
+                    if (!pEndStr) {
+                        pEndStr = validChildren.reduce((max, p) => p.end > max ? p.end : max, validChildren[0].end);
+                    }
                 }
             }
 
