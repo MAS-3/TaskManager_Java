@@ -186,12 +186,22 @@
                 start: /*[[${task.startDate}]]*/ '2023-01-01',
                 end: /*[[${task.sortDate}]]*/ '2023-01-05', // ★変更: getEarliestDeadlineDate -> sortDate
                 progress: /*[[${task.isCompleted ? 100 : 0}]]*/ 0,
+                processes: [
+                    /*[# th:each="proc : ${task.processes}"]*/
+                    {
+                        id: "Process-" + /*[[${proc.id}]]*/ '101',
+                        name: /*[[${proc.name}]]*/ 'Process Name',
+                        start: /*[[${proc.startDate}]]*/ '',
+                        end: /*[[${proc.endDate}]]*/ '',
+                        progress: /*[[${proc.isCompleted ? 100 : 0}]]*/ 0
+                    },
+                    /*[/]*/
+                ]
             },
             /*[/]*/
         ];
         /*]]>*/
     </script>
-
-    <script th:src="@{/js/main.js?v=5}"></script>
+    <script th:src="@{/js/main.js?v=6}"></script>
 </body>
 </html>

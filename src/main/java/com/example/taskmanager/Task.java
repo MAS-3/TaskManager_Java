@@ -30,6 +30,7 @@ public class Task {
      * 変数名も deadlines -> processes に変更
      */
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("startDate ASC, id ASC")
     private Set<TaskProcess> processes = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -102,7 +103,7 @@ public class Task {
         }
         return processes.stream()
                 .filter(p -> !p.isCompleted())
-                .map(TaskProcess::getEndDate) // Processの終了日で比較
+                .map(TaskProcess::getStartDate) // Processの開始日で比較
                 .min(LocalDate::compareTo)
                 .orElse(LocalDate.MAX);
     }
