@@ -1,75 +1,139 @@
 /**
- * 書き忘れた変数（var/let）など、あいまいなコードをエラーとして知らせてくれるため、バグ防止になります。
+ * main.js
  */
 "use strict";
 
-/**
- * (2) DOMContentLoaded イベント
- * 「HTML（DOM）の読み込みがすべて完了したら、
- * この中括弧 { ... } の中の処理を実行してね」
- * という、非常に重要なイベントリスナーです。
- *
- * (これがないと、HTMLが読み込まれる前にJSが動こうとして、
- * 「ボタンが見つからない」等のエラーになります)
- */
 window.addEventListener("DOMContentLoaded", (event) => {
-  
-  // ページ（DOM）が読み込まれたら実行
 
     // --- 納期(Deadline)の「+」ボタン処理 ---
-    document.getElementById("add-deadline").addEventListener("click", function() {
-        const container = document.getElementById("deadline-inputs");
-        
-        // (A) 新しい入力欄（div）を作成
-        const newRow = document.createElement("div");
-        newRow.className = "row mb-2"; // BootstrapのCSS
-        
-        // (B) ★ name="deadlineName" と name="deadlineDate" でHTMLを作成
-        //    (これがコントローラの List<String> deadlineNames に対応する)
-        newRow.innerHTML = `
-            <div class="col-5">
-                <input type="text" name="deadlineName" class="form-control" placeholder="期限名 (例: キー期限)">
-            </div>
-            <div class="col-5">
-                <input type="date" name="deadlineDate" class="form-control">
-            </div>
-            <div class="col-2">
-                <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
-            </div>
-        `;
-        container.appendChild(newRow);
-    });
+    const addDeadlineBtn = document.getElementById("add-deadline");
+    if (addDeadlineBtn) {
+        addDeadlineBtn.addEventListener("click", function() {
+            const container = document.getElementById("deadline-inputs");
+            
+            // ★自動入力ロジック: 直前の行の終了日を探す
+            let defaultStartDate = "";
+            
+            // 1. もし既に納期行があるなら、最後の行の終了日を取得
+            const lastRow = container.lastElementChild;
+            if (lastRow) {
+                // 直前の行の「終了日(deadlineEndDate)」を探す
+                const lastEndDateInput = lastRow.querySelector('input[name="deadlineEndDate"]');
+                if (lastEndDateInput && lastEndDateInput.value) {
+                    defaultStartDate = lastEndDateInput.value;
+                }
+            }
+            // 2. もし納期がまだなくて、タスク自体の開始日が入力されていたら、それを使う
+            if (!defaultStartDate) {
+                const taskStartDateInput = document.querySelector('input[name="startDate"]');
+                if (taskStartDateInput && taskStartDateInput.value) {
+                    defaultStartDate = taskStartDateInput.value;
+                }
+            }
+
+            const newRow = document.createElement("div");
+            newRow.className = "row mb-2"; 
+            
+            // ★ここが重要！ name属性をコントローラに合わせる
+            // deadlineStartDate と deadlineEndDate の2つを作る
+            newRow.innerHTML = `
+                <div class="col-4">
+                    <input type="text" name="deadlineName" class="form-control" placeholder="工程名">
+                </div>
+                <div class="col-3">
+                    <input type="date" name="deadlineStartDate" class="form-control" value="${defaultStartDate}" title="開始日">
+                </div>
+                <div class="col-3">
+                    <input type="date" name="deadlineEndDate" class="form-control" title="終了日">
+                </div>
+                <div class="col-2">
+                    <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
+                </div>
+            `;
+            container.appendChild(newRow);
+        });
+    }
 
     // --- 関連URLの「+」ボタン処理 ---
-    document.getElementById("add-url").addEventListener("click", function() {
-        const container = document.getElementById("url-inputs");
-        
-        // (A) 新しい入力欄（div）を作成
-        const newRow = document.createElement("div");
-        newRow.className = "row mb-2";
-        
-        // (B) ★ name="urlName" と name="urlLink" でHTMLを作成
-        newRow.innerHTML = `
-            <div class="col-5">
-                <input type="text" name="urlName" class="form-control" placeholder="URL名 (例: Figma)">
-            </div>
-            <div class="col-5">
-                <input type="text" name="urlLink" class="form-control" placeholder="http://...">
-            </div>
-            <div class="col-2">
-                <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
-            </div>
-        `;
-        container.appendChild(newRow);
-    });
+    const addUrlBtn = document.getElementById("add-url");
+    if (addUrlBtn) {
+        addUrlBtn.addEventListener("click", function() {
+            const container = document.getElementById("url-inputs");
+            const newRow = document.createElement("div");
+            newRow.className = "row mb-2";
+            newRow.innerHTML = `
+                <div class="col-5">
+                    <input type="text" name="urlName" class="form-control" placeholder="URL名">
+                </div>
+                <div class="col-5">
+                    <input type="text" name="urlLink" class="form-control" placeholder="http://...">
+                </div>
+                <div class="col-2">
+                    <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
+                </div>
+            `;
+            container.appendChild(newRow);
+        });
+    }
 
     // --- 共通の「削除」ボタン処理 ---
-    // (document全体で "remove-row" クラスのクリックを監視)
     document.addEventListener("click", function(e) {
         if (e.target && e.target.classList.contains("remove-row")) {
-            // クリックされたボタンの親の親（div.row）を削除
             e.target.closest(".row").remove();
         }
     });
 
+    // --- ガントチャート処理 (Google Charts) ---
+    google.charts.load('current', {'packages':['gantt']});
+    google.charts.setOnLoadCallback(drawChart);
+
+    function drawChart() {
+        const tasksData = window.taskDataForGantt || [];
+        const data = new google.visualization.DataTable();
+        data.addColumn('string', 'Task ID');
+        data.addColumn('string', 'Task Name');
+        data.addColumn('string', 'Resource');
+        data.addColumn('date', 'Start Date');
+        data.addColumn('date', 'End Date');
+        data.addColumn('number', 'Duration');
+        data.addColumn('number', 'Percent Complete');
+        data.addColumn('string', 'Dependencies');
+
+        const rows = [];
+        
+        tasksData.forEach(t => {
+            if (!t.start || !t.end) return;
+            // 異常値除外 (9999年など)
+            if (t.end.indexOf("9999") !== -1) return;
+
+            const startDate = new Date(t.start);
+            const endDate = new Date(t.end);
+
+            if (endDate < startDate) {
+                endDate.setDate(startDate.getDate());
+            }
+
+            rows.push([
+                t.id, t.name, 'Task',
+                startDate, endDate, null, t.progress, null
+            ]);
+        });
+
+        if (rows.length > 0) {
+            data.addRows(rows);
+            const options = {
+                height: rows.length * 42 + 50,
+                gantt: {
+                    trackHeight: 30,
+                    barCornerRadius: 4,
+                    backgroundColor: { fill: '#fff' }
+                }
+            };
+            const chart = new google.visualization.Gantt(document.getElementById('gantt-chart'));
+            chart.draw(data, options);
+        } else {
+            const chartDiv = document.getElementById('gantt-chart');
+            if(chartDiv) chartDiv.innerHTML = "<div class='alert alert-light'>表示できるタスクがありません</div>";
+        }
+    }
 });

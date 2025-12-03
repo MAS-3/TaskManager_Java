@@ -4,9 +4,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn; // ★インポート
-import jakarta.persistence.ManyToOne; // ★インポート
-import java.time.LocalDate; // ★インポート
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import java.time.LocalDate;
 
 @Entity
 public class Deadline {
@@ -17,7 +17,8 @@ public class Deadline {
 
     private String name; // "キーになる期限", "タスクの納期" など
     
-    private LocalDate date; // 期限日
+    private LocalDate startDate; // 開始日
+    private LocalDate endDate;   // 終了日
 
     /**
      * "多対1" の関連 (Deadline N : 1 Task)
@@ -29,20 +30,9 @@ public class Deadline {
     private Task task;
     private boolean isCompleted = false;//完了ステータス管理カラム
 
+
     // --- Getter / Setter ---
-    // (JPAが動作するために必須です)
-    
-    // デフォルトコンストラクタ
-    public Deadline() {
-    }
 
-    // name と date を受け取るコンストラクタ
-    public Deadline(String name, LocalDate date) {
-        this.name = name;
-        this.date = date;
-    }
-
-    // Getter / Setter
     public Long getId() {
         return id;
     }
@@ -51,20 +41,32 @@ public class Deadline {
         this.id = id;
     }
 
+    // デフォルトコンストラクタ
+    public Deadline() {
+    }
+
+    // name と date を受け取るコンストラクタ
+    public Deadline(String name, LocalDate startDate, LocalDate endDate) {
+        this.name = name;
+        this.startDate = startDate;
+        this.endDate = endDate;
+    }
+
+
+    // 開始日
+    public LocalDate getStartDate() { return startDate; }
+    public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
+
+    // 終了日
+    public LocalDate getEndDate() { return endDate; }
+    public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+
     public String getName() {
         return name;
     }
 
     public void setName(String name) {
         this.name = name;
-    }
-
-    public LocalDate getDate() {
-        return date;
-    }
-
-    public void setDate(LocalDate date) {
-        this.date = date;
     }
 
     public Task getTask() {

@@ -90,3 +90,17 @@ h2 {
 .btn-delete-image:hover {
     background-color: darkred;
 }
+
+
+/* --- ガントチャート --- */
+
+#gantt-chart {
+    /* Google ChartsはSVGで描画されるので、横幅100%にしておけばOK */
+    width: 100%;
+    min-height: 100px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: white;
+    overflow-x: auto; /* 横スクロール */
+}

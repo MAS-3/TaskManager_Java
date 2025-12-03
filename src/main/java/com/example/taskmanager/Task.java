@@ -16,8 +16,7 @@ import java.util.LinkedHashSet;
 
 /**
  * (1) @Entity
- * これがデータベースのテーブルに対応するクラス（エンティティ）
- * であることを示します。
+ * これがデータベースのテーブルに対応するクラス（エンティティ）であることを示します。
  * （Spring Data JPAがこれを読み取って、自動で "task" テーブルを作成します）
  */
 @Entity
@@ -30,8 +29,7 @@ public class Task {
     @Id
     /**
      * (3) @GeneratedValue
-     * 主キー（id）の値をデータベースが自動で採番（例: 1, 2, 3...）
-     * してくれることを示します。
+     * 主キー（id）の値をデータベースが自動で採番（例: 1, 2, 3...）してくれる設定
      */
     @GeneratedValue(strategy = GenerationType.IDENTITY) // (H2/PostgreSQL/MySQLで推奨される設定)
     private Long id; // タスクのID
@@ -49,18 +47,22 @@ public class Task {
      */
     private boolean isCompleted = false;
 
-    /**
-     * ★(新規追加) 完了した日時
-     * （アーカイブの30日ルールなどで使う）
+
+    /* 
+     * タスクの開始日
+     */
+    private LocalDate startDate;
+
+    /*
+     * (新規追加) 完了した日時
+     *（アーカイブの30日ルールなどで使う）
      */
     private LocalDateTime completedAt;
 
     /**
-     * メモ欄（description）用のフィールドを追加
+     * メモ欄（description）用のフィールド
      * (「タスク概要」として使用)
-     * @Column(length = 1000) を付けることで、
-     * DB側で長めのテキスト（例: VARCHAR(1000)）を
-     * 保存できるように指定します。
+     * @Column(length = 1000) を付けることで、 DB側で長めのテキスト（例: VARCHAR(1000)）を保存できるように指定します。
      */
     @Column(length = 2000) // 概要は長くなるかもしれないので 2000 に変更
     private String description;
@@ -84,11 +86,16 @@ public class Task {
     private Set<Deadline> deadlines = new LinkedHashSet<>();
 
     /**
-     * 関連URLとの関連
+     * 関連URLとタスクの関連
      * @OneToMany : 「1対多」の関係 (Task 1 : N RelatedURL)
      */
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<RelatedURL> relatedUrls = new LinkedHashSet<>();
+
+    //画像とタスクの関連
+    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<TaskImage> images = new LinkedHashSet<>();
+
 
     /**
      * (6) 引数なしのコンストラクタ
@@ -103,10 +110,6 @@ public class Task {
     public Task(String title) {
         this.title = title;
     }
-
-    /**
-     * 各フィールドの Getter と Setter（データベースとのやり取り窓口）
-     */
     
     // タスクのID
     public Long getId() {
@@ -173,14 +176,36 @@ public class Task {
     }
 
     /**
-     * 画像とのリレーション
+     * 各フィールドの Getter と Setter
+     * （データベースとのやり取り窓口）
      */
-    @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<TaskImage> images = new LinkedHashSet<>();
 
-    // ... (Getter/Setter) ...
 
-    // 画像
+    //関連（Deadline, RelatedURL）を簡単に追加するための便利メソッド
+    public void addDeadline(Deadline deadline) {
+        this.deadlines.add(deadline);
+        deadline.setTask(this);
+    }
+
+    public void addRelatedURL(RelatedURL url) {
+        this.relatedUrls.add(url);
+        url.setTask(this);
+    }
+
+    //このタスクが持つ納期リスト(deadlines)の中で、「最も早い日付」を探して返す便利メソッド
+    public LocalDate getEarliestDeadlineDate() {
+        if (deadlines.isEmpty()) {// もし納期が1つも登録されていなければ...
+            return LocalDate.MAX; // ソート順で「一番後ろ」にしたいので、「すごく遠い未来」を返す
+        }
+
+        return deadlines.stream()// 納期リスト(endDate)をストリーム（流れ）にして処理する
+                .filter(d -> !d.isCompleted())//完了タスクのみを通す
+                .map(Deadline::getEndDate) // Deadlineオブジェクトから「日付」だけを取り出す
+                .min(LocalDate::compareTo) // 日付同士を比較して「最小値」を探す
+                .orElse(LocalDate.MAX); // 万が一見つからなければ最大値を返す
+    }
+
+    // 画像保存処理
     public Set<TaskImage> getImages() {
         return images;
     }
@@ -192,33 +217,13 @@ public class Task {
         image.setTask(this);
     }
 
-
-    /**
-     * 関連（Deadline, RelatedURL）を簡単に追加するための便利メソッド
-     */
-    public void addDeadline(Deadline deadline) {
-        this.deadlines.add(deadline);
-        deadline.setTask(this);
+    //ガントチャート
+    public LocalDate getStartDate() {
+        return startDate;
+    }
+    public void setStartDate(LocalDate startDate) {
+        this.startDate = startDate;
     }
 
-    public void addRelatedURL(RelatedURL url) {
-        this.relatedUrls.add(url);
-        url.setTask(this);
-    }
 
-    /**
-     * このタスクが持つ納期リスト(deadlines)の中で、
-     * 「最も早い日付」を探して返す便利メソッド
-     */
-    public LocalDate getEarliestDeadlineDate() {
-        if (deadlines.isEmpty()) {// もし納期が1つも登録されていなければ...
-            return LocalDate.MAX; // ソート順で「一番後ろ」にしたいので、「すごく遠い未来」を返す
-        }
-
-        return deadlines.stream()// 納期リスト(deadlines)をストリーム（流れ）にして処理する
-                .filter(d -> !d.isCompleted())//完了タスクのみを通す
-                .map(Deadline::getDate) // Deadlineオブジェクトから「日付」だけを取り出す
-                .min(LocalDate::compareTo) // 日付同士を比較して「最小値」を探す
-                .orElse(LocalDate.MAX); // 万が一見つからなければ最大値を返す
-    }
 }
