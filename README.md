@@ -66,3 +66,38 @@ VSCodeとDev Containersを使って、コンテナ内で開発・実行する場
 
 5.  **アクセス:**
     ブラウザで `http://localhost:8080/tasks` を開きます。
+
+### 再ビルドコマンド
+``` 
+コンテナを止める
+docker stop my-task-app
+コンテナ削除
+docker rm my-task-app
+コンテナをビルド
+docker build -t taskmanager-app . (キャッシュあり)
+docker build --no-cache -t taskmanager-app . (キャッシュなし)
+コンテナを起動（port:8080）
+docker run -d -p 8080:8080 -v ./taskmanager-db:/data --name my-task-app taskmanager-app
+```
+
+### データベースの削除
+#### Mac / Linux
+```　rm -rf ./taskmanager-db　```
+#### Windows (PowerShell)
+``` rmdir -r -fo ./taskmanager-db　```
+
+
+### H2ブラウザログイン情報 2025.12.4(追記)
+```
+JDBC URL: jdbc:h2:file:/data/taskdb
+（Dockerfileで指定した、コンテナ内のDBファイルパスです）
+User Name: sa
+（H2のデフォルトユーザー名です）
+Password: （空のまま）
+（H2のデフォルトパスワードは空です）
+```
+
+### Basic認証 (AWSアップロード仕様) 2025.12.4(追記)
+** ログイン情報 **
+> UseerName : shota.masuda
+> Password : ac1951224
