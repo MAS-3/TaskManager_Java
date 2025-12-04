@@ -16,10 +16,9 @@
                 <p class="text-muted" th:text="'本日の日付: ' + ${today}"></p>
             </div>
             <div>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">
-                    + 新規作成
-                </button>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createTaskModal">+ 新規作成</button>
                 <a th:href="@{/archive}" class="btn btn-outline-secondary">アーカイブ</a>
+                <a th:href="@{/genres}" class="btn btn-outline-primary me-2">ジャンル管理</a>
             </div>
         </header>
 
