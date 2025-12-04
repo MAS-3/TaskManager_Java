@@ -1,75 +1,236 @@
-/**
- * 書き忘れた変数（var/let）など、あいまいなコードをエラーとして知らせてくれるため、バグ防止になります。
- */
 "use strict";
 
-/**
- * (2) DOMContentLoaded イベント
- * 「HTML（DOM）の読み込みがすべて完了したら、
- * この中括弧 { ... } の中の処理を実行してね」
- * という、非常に重要なイベントリスナーです。
- *
- * (これがないと、HTMLが読み込まれる前にJSが動こうとして、
- * 「ボタンが見つからない」等のエラーになります)
- */
 window.addEventListener("DOMContentLoaded", (event) => {
-  
-  // ページ（DOM）が読み込まれたら実行
 
-    // --- 納期(Deadline)の「+」ボタン処理 ---
-    document.getElementById("add-deadline").addEventListener("click", function() {
-        const container = document.getElementById("deadline-inputs");
-        
-        // (A) 新しい入力欄（div）を作成
-        const newRow = document.createElement("div");
-        newRow.className = "row mb-2"; // BootstrapのCSS
-        
-        // (B) ★ name="deadlineName" と name="deadlineDate" でHTMLを作成
-        //    (これがコントローラの List<String> deadlineNames に対応する)
-        newRow.innerHTML = `
-            <div class="col-5">
-                <input type="text" name="deadlineName" class="form-control" placeholder="期限名 (例: キー期限)">
-            </div>
-            <div class="col-5">
-                <input type="date" name="deadlineDate" class="form-control">
-            </div>
-            <div class="col-2">
-                <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
-            </div>
-        `;
-        container.appendChild(newRow);
-    });
+    // --- 工程(Process)の「+」ボタン処理 ---
+    const addProcessBtn = document.getElementById("add-process"); 
+    if (addProcessBtn) {
+        addProcessBtn.addEventListener("click", function() {
+            const container = document.getElementById("process-inputs"); 
+            
+            let defaultStartDate = "";
+            const lastRow = container.lastElementChild;
+            if (lastRow) {
+                const lastEndDateInput = lastRow.querySelector('input[name="processEndDate"]');
+                if (lastEndDateInput && lastEndDateInput.value) {
+                    defaultStartDate = lastEndDateInput.value;
+                }
+            }
+            if (!defaultStartDate) {
+                const taskStartDateInput = document.querySelector('input[name="startDate"]');
+                if (taskStartDateInput && taskStartDateInput.value) {
+                    defaultStartDate = taskStartDateInput.value;
+                }
+            }
 
-    // --- 関連URLの「+」ボタン処理 ---
-    document.getElementById("add-url").addEventListener("click", function() {
-        const container = document.getElementById("url-inputs");
-        
-        // (A) 新しい入力欄（div）を作成
-        const newRow = document.createElement("div");
-        newRow.className = "row mb-2";
-        
-        // (B) ★ name="urlName" と name="urlLink" でHTMLを作成
-        newRow.innerHTML = `
-            <div class="col-5">
-                <input type="text" name="urlName" class="form-control" placeholder="URL名 (例: Figma)">
-            </div>
-            <div class="col-5">
-                <input type="text" name="urlLink" class="form-control" placeholder="http://...">
-            </div>
-            <div class="col-2">
-                <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
-            </div>
-        `;
-        container.appendChild(newRow);
-    });
+            const newRow = document.createElement("div");
+            newRow.className = "row mb-2"; 
+            
+            newRow.innerHTML = `
+                <div class="col-4">
+                    <input type="text" name="processName" class="form-control" placeholder="工程名">
+                </div>
+                <div class="col-3">
+                    <input type="date" name="processStartDate" class="form-control" value="${defaultStartDate}" title="開始日">
+                </div>
+                <div class="col-3">
+                    <input type="date" name="processEndDate" class="form-control" title="終了日">
+                </div>
+                <div class="col-2">
+                    <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
+                </div>
+            `;
+            container.appendChild(newRow);
+        });
+    }
 
-    // --- 共通の「削除」ボタン処理 ---
-    // (document全体で "remove-row" クラスのクリックを監視)
+    // --- 関連URL ---
+    const addUrlBtn = document.getElementById("add-url");
+    if (addUrlBtn) {
+        addUrlBtn.addEventListener("click", function() {
+            const container = document.getElementById("url-inputs");
+            const newRow = document.createElement("div");
+            newRow.className = "row mb-2";
+            newRow.innerHTML = `
+                <div class="col-5">
+                    <input type="text" name="urlName" class="form-control" placeholder="URL名">
+                </div>
+                <div class="col-5">
+                    <input type="text" name="urlLink" class="form-control" placeholder="http://...">
+                </div>
+                <div class="col-2">
+                    <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
+                </div>
+            `;
+            container.appendChild(newRow);
+        });
+    }
+
+    // --- 削除ボタン ---
     document.addEventListener("click", function(e) {
         if (e.target && e.target.classList.contains("remove-row")) {
-            // クリックされたボタンの親の親（div.row）を削除
             e.target.closest(".row").remove();
         }
     });
 
+    // --- ガントチャート処理 (Google Charts) ---
+    google.charts.load('current', {'packages':['gantt'], 'language': 'ja'});
+    google.charts.setOnLoadCallback(drawChart);
+
+    function drawChart() {
+        const tasksData = window.taskDataForGantt || [];
+        const data = new google.visualization.DataTable();
+        
+        data.addColumn('string', 'Task ID');
+        data.addColumn('string', 'Task Name');
+        data.addColumn('string', 'Resource');
+        data.addColumn('date', 'Start Date');
+        data.addColumn('date', 'End Date');
+        data.addColumn('number', 'Duration');
+        data.addColumn('number', 'Percent Complete');
+        data.addColumn('string', 'Dependencies');
+
+        const rows = [];
+        
+        tasksData.forEach(t => {
+            // 親タスクの日付計算
+            let pStartStr = t.start;
+            let pEndStr = t.end; // ★まずはタスク自身の終了日を採用
+
+            // 子工程がある場合
+            if (t.processes && t.processes.length > 0) {
+                const validChildren = t.processes.filter(p => p.start && p.end);
+                
+                if (validChildren.length > 0) {
+                    // 開始日がなければ子から補完
+                    if (!pStartStr) {
+                        pStartStr = validChildren.reduce((min, p) => p.start < min ? p.start : min, validChildren[0].start);
+                    }
+                    // ★終了日がなければ子から補完 (あればそのまま)
+                    if (!pEndStr) {
+                        pEndStr = validChildren.reduce((max, p) => p.end > max ? p.end : max, validChildren[0].end);
+                    }
+                }
+            }
+
+            // もし子工程がなく、親タスクだけの日付が入っている場合のバックアップ
+            // (t.end が有効な日付なら pEndStr に採用)
+            if (!pEndStr && t.end && t.end.indexOf("9999") === -1) {
+                pEndStr = t.end;
+            }
+
+            // 2. 親タスクの描画
+            if (pStartStr && pEndStr) {
+                const pStart = new Date(pStartStr);
+                const pEnd = new Date(pEndStr);
+                
+                // 逆転防止
+                if (pEnd < pStart) pEnd.setDate(pStart.getDate());
+
+                rows.push([
+                    t.id, 
+                    t.name, 
+                    'Task', 
+                    pStart, 
+                    pEnd, 
+                    null, 
+                    t.progress, 
+                    null
+                ]);
+            }
+
+            // 3. 子工程の描画
+            if (t.processes && t.processes.length > 0) {
+                t.processes.forEach(p => {
+                    if (!p.start || !p.end) return; 
+                    const subStart = new Date(p.start);
+                    const subEnd = new Date(p.end);
+                    if (subEnd < subStart) subEnd.setDate(subStart.getDate());
+
+                    rows.push([
+                        p.id, 
+                        "　↳ " + p.name, 
+                        'Process', 
+                        subStart, 
+                        subEnd, 
+                        null, 
+                        p.progress, 
+                        null 
+                    ]);
+                });
+            }
+        });
+
+        if (rows.length > 0) {
+            data.addRows(rows);
+
+            // --- 全日付の目盛り(ticks)を作成 ---
+            let minDate = new Date(8640000000000000);
+            let maxDate = new Date(-8640000000000000);
+
+            rows.forEach(r => {
+                if (r[3] < minDate) minDate = r[3];
+                if (r[4] > maxDate) maxDate = r[4];
+            });
+            minDate.setDate(minDate.getDate() - 1);
+            maxDate.setDate(maxDate.getDate() + 1);
+
+            let ticks = [];
+            let currDate = new Date(minDate);
+            while (currDate <= maxDate) {
+                ticks.push(new Date(currDate));
+                currDate.setDate(currDate.getDate() + 1);
+            }
+
+            const options = {
+                height: rows.length * 42 + 50,
+                
+                // ★修正: フォーマットに曜日 (E) を追加
+                hAxis: {
+                    ticks: ticks,
+                    gridlines: {
+                        color: '#eee',
+                        count: -1,
+                        units: {
+                            days: {format: ['M/d (E)']} // ★日付フォーマットを強制指定
+                        }
+                    }
+                },
+
+                gantt: {
+                    trackHeight: 30,
+                    barCornerRadius: 4,
+                    backgroundColor: { fill: '#fff' },
+                    palette: [
+                        { "color": "#4285F4", "dark": "#2a56c6", "light": "#c6dafc" },
+                        { "color": "#db4437", "dark": "#a52714", "light": "#f4c7c3" }
+                    ]
+                }
+            };
+            
+            const chart = new google.visualization.Gantt(document.getElementById('gantt-chart'));
+
+            // ★シンプル版: 文字に「(土)」「(日)」が含まれていたらクラスを追加
+            google.visualization.events.addListener(chart, 'ready', function () {
+                document.querySelectorAll('#gantt-chart text').forEach(text => {
+                    const val = text.textContent;
+                    
+                    // "土" または "Sat" が含まれていれば青
+                    if (val.includes('土') || val.includes('Sat')) {
+                        text.classList.add('gantt-sat');
+                    } 
+                    // "日" または "Sun" が含まれていれば赤
+                    else if (val.includes('日') || val.includes('Sun')) {
+                        text.classList.add('gantt-sun');
+                    }
+                });
+            });
+
+            chart.draw(data, options);
+
+        } else {
+            const chartDiv = document.getElementById('gantt-chart');
+            if(chartDiv) chartDiv.innerHTML = "<div class='alert alert-light'>表示できるタスクがありません</div>";
+        }
+    }
 });

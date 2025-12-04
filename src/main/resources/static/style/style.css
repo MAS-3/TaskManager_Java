@@ -90,3 +90,30 @@ h2 {
 .btn-delete-image:hover {
     background-color: darkred;
 }
+
+
+/* --- ガントチャート --- */
+
+#gantt-chart {
+    /* ★修正: 最小幅を指定して、画面からはみ出したらスクロールさせる */
+    width: 100%;
+    min-width: 1200px; /* 最低でもこれくらいの幅を確保 */
+    
+    min-height: 100px;
+    border: 1px solid #eee;
+    border-radius: 4px;
+    padding: 10px;
+    background-color: white;
+    overflow-x: auto; /* 横スクロール */
+}
+
+/* ガントチャートの土日色付け用 */
+.gantt-sat {
+    fill: #3498db !important; /* 青 */
+    font-weight: bold;
+}
+
+.gantt-sun {
+    fill: #e74c3c !important; /* 赤 */
+    font-weight: bold;
+}
