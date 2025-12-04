@@ -79,6 +79,10 @@ docker build --no-cache -t taskmanager-app . (キャッシュなし)
 コンテナを起動（port:8080）
 docker run -d -p 8080:8080 -v ./taskmanager-db:/data --name my-task-app taskmanager-app
 ```
+### dockerのVol.削除コマンド (dockerのキャッシュ削除)
+```
+docker volume prune -f 
+```
 
 ### データベースの削除
 #### Mac / Linux
