@@ -99,5 +99,7 @@ Password: （空のまま）
 
 ### Basic認証 (AWSアップロード仕様) 2025.12.4(追記)
 ** ログイン情報 **
-> UseerName : shota.masuda
-> Password : ac1951224
+```
+UserName : shota.masuda
+Password : ac1951224
+```
