@@ -43,3 +43,6 @@ logs/
 ### Build Artifacts ###
 *.jar
 *.war
+
+### Local Machine Properties ###
+application-sht-macbook.properties
