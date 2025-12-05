@@ -3,123 +3,276 @@ package com.example.taskmanager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-// ★1. この import 文を追記してください
-import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.*; // まとめてインポート
+import org.springframework.web.multipart.MultipartFile;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Comparator;
+import java.util.UUID;
+import java.nio.file.*;
+import java.io.IOException;
 
-/**
- * (1) @Controller
- * これがブラウザからのリクエストを受け付ける「コントローラ（司令塔）」
- * であることをSpringに伝えます。
- *
- * (メモ: APIでデータを返すときは @RestController を使いましたが、
- * 今回はHTML画面を返すので @Controller を使います)
- */
 @Controller
 public class TaskController {
 
-    /**
-     * (2) @Autowired (オートワイヤード)
-     * Springが自動で作ってくれた TaskRepository の実体を、
-     * この変数（taskRepository）に自動でセット（注入）してね、という指示です。
-     * これにより、このクラス内で taskRepository.findAll() などが使えるようになります。
-     */
-    @Autowired
-    private TaskRepository taskRepository;
-
-    /**
-     * (3) @GetMapping("/tasks")
-     * ブラウザから "http://localhost:8080/tasks" というURLへ
-     * GETリクエストが来た時に、この listTasks メソッドを実行する、という設定です。
-     * (Laravelの routes/web.php で Route::get('/tasks', ...) と書くのと同じです)
-     */
-    @GetMapping("/tasks")
-    public String listTasks(Model model) { // (4) Model model
-
-        // (5) DBからすべてのタスクを取得する
-        // TaskRepository の findAll() メソッドを使います。
-        var tasks = taskRepository.findAll();
-
-        // (6) 取得したタスク一覧を "tasks" という名前で Model に追加する
-        // Model とは、コントローラからHTML（画面）へデータを運ぶための「かばん」です。
+    @Autowired private TaskRepository taskRepository;
+    @Autowired private GenreRepository genreRepository;
+    @Autowired private RelatedURLRepository relatedURLRepository;
+    @Autowired private TaskProcessRepository taskProcessRepository;
+    @Autowired private TaskImageRepository taskImageRepository;
+    
+    
+    // --- 共通処理 ---
+    private void loadTaskData(Model model) {
+        var tasks = taskRepository.findByIsCompletedFalse();
+        // ★変更: Task::getSortDate を使用
+        tasks.sort(Comparator.comparing(Task::getSortDate));
         model.addAttribute("tasks", tasks);
+    }
 
-        // (7) "tasks.html" という名前のHTMLテンプレートを表示してね、と返す
-        // Spring Boot（Thymeleaf）は自動的に
-        // "src/main/resources/templates/tasks.html" を探しに行きます。
+    @GetMapping("/")
+    public String index() { return "redirect:/tasks"; }
+
+    @GetMapping("/tasks")
+    public String listTasks(Model model) {
+        loadTaskData(model);
+        model.addAttribute("allGenres", genreRepository.findAll());
+        model.addAttribute("today", LocalDate.now());
         return "tasks";
     }
 
-    /**
-     * (1) @PostMapping("/tasks/create")
-     * HTMLフォームの th:action と method="post" に対応します。
-     * "/tasks/create" へのPOSTリクエストが来たら、このメソッドが動きます。
-     */
+    // タスク作成
     @PostMapping("/tasks/create")
     public String createTask(
-        @RequestParam("title") String title,
-        @RequestParam("description") String description
+            //引数
+            //タイトル
+            @RequestParam("title") String title,
+            //概要
+            @RequestParam("description") String description,
+            //ジャンル(id)
+            @RequestParam("genreId") Long genreId,
+            //タスクの開始日、終了日
+            @RequestParam(value = "startDate", required = false) LocalDate startDate,
+            @RequestParam(value = "endDate", required = false) LocalDate endDate,
+            //工程の名前、開始日、終了日
+            @RequestParam(value = "processName", required = false) List<String> processNames,
+            @RequestParam(value = "processStartDate", required = false) List<String> processStartDates,
+            @RequestParam(value = "processEndDate", required = false) List<String> processEndDates,
+            //関連URLの名前、URL
+            @RequestParam(value = "urlName", required = false) List<String> urlNames,
+            @RequestParam(value = "urlLink", required = false) List<String> urlLinks,
+            //画像
+            @RequestParam(value = "imageFiles", required = false) List<MultipartFile> imageFiles
     ) {
-        // (2) @RequestParam("title") String title
-        // フォームから送られてきた name="title" のデータを、
-        // String 型の変数 title として受け取ります。
-
-        // (3) 受け取ったタイトルで、新しい Task オブジェクトを作成
+        // コンストラクタ作成(初期化)
         Task newTask = new Task(title);
-
-        // ★★★ 2. 受け取った description を newTask にセットする ★★★
+        //概要をセット
         newTask.setDescription(description);
+        // タスクの開始日、終了日をセット
+        newTask.setStartDate(startDate);
+        newTask.setEndDate(endDate);
+        // ジャンルと紐付けするidをセット
+        genreRepository.findById(genreId).ifPresent(newTask::setGenre);
 
-        // (4) TaskRepository を使って、新しいタスクをDBに保存
+        // 工程(Process)の処理
+        if (processNames != null && processStartDates != null && processEndDates != null) {
+            for (int i = 0; i < processNames.size(); i++) {
+                //工程の日付が入力されていなかった場合にエラーが出るので、エスケープ対策
+                if (i >= processStartDates.size() || i >= processEndDates.size()) break;
+
+                if (!processNames.get(i).isEmpty() && !processEndDates.get(i).isEmpty()) {//肯定名、日付が入力されていたら
+                    //工程のコンストラクタ生成
+                    TaskProcess process = new TaskProcess();
+                    process.setName(processNames.get(i));
+                    if (!processStartDates.get(i).isEmpty()) {
+                        process.setStartDate(LocalDate.parse(processStartDates.get(i)));
+                    }
+                    process.setEndDate(LocalDate.parse(processEndDates.get(i)));
+                    
+                    newTask.addProcess(process);
+                }
+            }
+        }
+
+        if (urlNames != null && urlLinks != null) {
+            for (int i = 0; i < urlNames.size(); i++) {
+                if (i >= urlLinks.size()) break;
+                if (!urlNames.get(i).isEmpty() && !urlLinks.get(i).isEmpty()) {
+                    RelatedURL url = new RelatedURL();
+                    url.setName(urlNames.get(i));
+                    url.setUrl(urlLinks.get(i));
+                    newTask.addRelatedURL(url);
+                }
+            }
+        }
+
+        if (imageFiles != null) {
+            for (MultipartFile file : imageFiles) {
+                String storedFilename = saveImageFile(file);
+                if (storedFilename != null) {
+                    TaskImage taskImage = new TaskImage(storedFilename, file.getOriginalFilename());
+                    newTask.addImage(taskImage);
+                }
+            }
+        }
         taskRepository.save(newTask);
-
-        // (5) 処理が終わったら、タスク一覧ページ ("/tasks") にリダイレクト（再表示）
-        //    (Laravel の redirect('/tasks') と同じです)
         return "redirect:/tasks";
     }
 
-    // --- ★ここから下が追記分 (Update / Delete) ---
-
-    /**
-     * (1) 完了 (Update) 処理
-     * @PostMapping("/tasks/{id}/complete")
-     * HTMLの th:action="@{/tasks/{id}/complete(id=${task.id})}" に対応します。
-     */
     @PostMapping("/tasks/{id}/complete")
     public String completeTask(@PathVariable("id") Long id) {
-        // (2) @PathVariable("id") Long id
-        // URL (/tasks/1/complete) の "1" の部分（パス変数）を、
-        // Long 型の変数 id として受け取ります。
-        // (@RequestParam がフォームデータを扱うのに対し、@PathVariable はURLのパスを扱います)
-
-        // (3) DBからタスクをIDで検索
-        // findById は Optional<Task> という「見つからないかもしれない」型で返す
+        taskRepository.findById(id).ifPresent(task -> {
+            task.setCompleted(true);
+            task.setCompletedAt(LocalDateTime.now());
+            taskRepository.save(task);
+        });
+        return "redirect:/tasks";
+    }
+    
+    @GetMapping("/tasks/{id}/edit")
+    public String editTaskForm(@PathVariable("id") Long id, Model model) {
         var taskOpt = taskRepository.findById(id);
-
-        // (4) もしタスクが見つかったら (Optional の中身があったら)
         if (taskOpt.isPresent()) {
-            Task task = taskOpt.get(); // タスク本体を取り出す
-            task.setCompleted(true); // (5) 完了フラグを true に変更
-            taskRepository.save(task); // (6) 変更したタスクをDBに上書き保存 (IDがあるのでUPDATEになる)
+            model.addAttribute("task", taskOpt.get());
+            model.addAttribute("allGenres", genreRepository.findAll());
+            return "edit_task";
         }
-        
-        // (7) 一覧ページにリダイレクト
         return "redirect:/tasks";
     }
 
-    /**
-     * (2) 削除 (Delete) 処理
-     * @PostMapping("/tasks/{id}/delete")
-     * HTMLの th:action="@{/tasks/{id}/delete(id=${task.id})}" に対応します。
-     */
+    @PostMapping("/tasks/{id}/update")
+    public String updateTask(
+            @PathVariable("id") Long id,
+            @RequestParam("title") String title,
+            @RequestParam("description") String description,
+            @RequestParam("genreId") Long genreId,
+            @RequestParam(value = "startDate", required = false) LocalDate startDate,
+            @RequestParam(value = "endDate", required = false) LocalDate endDate,
+            // ★変更: process...
+            @RequestParam(value = "processName", required = false) List<String> processNames,
+            @RequestParam(value = "processStartDate", required = false) List<String> processStartDates,
+            @RequestParam(value = "processEndDate", required = false) List<String> processEndDates,
+
+            @RequestParam(value = "urlName", required = false) List<String> urlNames,
+            @RequestParam(value = "urlLink", required = false) List<String> urlLinks,
+            @RequestParam(value = "imageFiles", required = false) List<MultipartFile> imageFiles
+    ) {
+        var taskOpt = taskRepository.findById(id);
+        if (taskOpt.isEmpty()) return "redirect:/tasks";
+        
+        Task taskToUpdate = taskOpt.get();
+        taskToUpdate.setTitle(title);
+        taskToUpdate.setDescription(description);
+        taskToUpdate.setStartDate(startDate);
+        taskToUpdate.setEndDate(endDate);
+
+        genreRepository.findById(genreId).ifPresent(taskToUpdate::setGenre);
+
+        taskToUpdate.getProcesses().clear();
+        taskToUpdate.getRelatedUrls().clear();
+
+        // 工程(Process)の処理
+        if (processNames != null && processStartDates != null && processEndDates != null) {
+            for (int i = 0; i < processNames.size(); i++) {
+                if (i >= processStartDates.size() || i >= processEndDates.size()) break;
+                if (!processNames.get(i).isEmpty() && !processEndDates.get(i).isEmpty()) {
+                    
+                    TaskProcess process = new TaskProcess();
+                    process.setName(processNames.get(i));
+                    if (!processStartDates.get(i).isEmpty()) {
+                        process.setStartDate(LocalDate.parse(processStartDates.get(i)));
+                        
+                    }
+                    process.setEndDate(LocalDate.parse(processEndDates.get(i)));
+                    
+                    taskToUpdate.addProcess(process);
+                }
+            }
+        }
+        // ... (URL, 画像処理は createTask と同じなので省略) ...
+        // (※本来は共通化すべきですが、今回は簡略化のためそのまま)
+        
+        if (urlNames != null && urlLinks != null) {
+            for (int i = 0; i < urlNames.size(); i++) {
+                if (i >= urlLinks.size()) break;
+                if (!urlNames.get(i).isEmpty() && !urlLinks.get(i).isEmpty()) {
+                    RelatedURL url = new RelatedURL();
+                    url.setName(urlNames.get(i));
+                    url.setUrl(urlLinks.get(i));
+                    taskToUpdate.addRelatedURL(url);
+                }
+            }
+        }
+        if (imageFiles != null) {
+            for (MultipartFile file : imageFiles) {
+                String storedFilename = saveImageFile(file);
+                if (storedFilename != null) {
+                    TaskImage taskImage = new TaskImage(storedFilename, file.getOriginalFilename());
+                    taskToUpdate.addImage(taskImage);
+                }
+            }
+        }
+
+        taskRepository.save(taskToUpdate);
+        return "redirect:/tasks";
+    }
+
+    // ... (delete, archive, revert はそのまま) ...
     @PostMapping("/tasks/{id}/delete")
     public String deleteTask(@PathVariable("id") Long id) {
-        // (1) URLから受け取ったIDを使って、DBからタスクを削除
         taskRepository.deleteById(id);
-        
-        // (2) 一覧ページにリダイレクト
         return "redirect:/tasks";
+    }
+    @GetMapping("/archive")
+    public String archiveList(Model model) {
+        model.addAttribute("tasks", taskRepository.findByIsCompletedTrue());
+        return "archive";
+    }
+    @PostMapping("/tasks/{id}/revert")
+    public String revertTask(@PathVariable("id") Long id) {
+        taskRepository.findById(id).ifPresent(task -> {
+            task.setCompleted(false);
+            taskRepository.save(task);
+        });
+        return "redirect:/archive";
+    }
+
+    // ★変更: URLパスを /processes/... に変更
+    @PostMapping("/processes/{id}/toggle")
+    public String toggleProcess(@PathVariable("id") Long id, Model model) {
+        taskProcessRepository.findById(id).ifPresent(p -> {
+            p.setCompleted(!p.isCompleted());
+            taskProcessRepository.save(p);
+        });
+        loadTaskData(model);
+        return "tasks :: taskListArea";
+    }
+    
+    // ... (deleteImage, saveImageFile はそのまま) ...
+    @PostMapping("/images/{id}/delete")
+    public String deleteImage(@PathVariable("id") Long id, Model model) {
+        taskImageRepository.findById(id).ifPresent(image -> {
+            try {
+                Path filePath = Paths.get("/data/uploads").resolve(image.getFilename());
+                Files.deleteIfExists(filePath);
+            } catch (IOException e) { e.printStackTrace(); }
+            taskImageRepository.delete(image);
+        });
+        loadTaskData(model);
+        return "tasks :: taskListArea";
+    }
+
+    private String saveImageFile(MultipartFile file) {
+        // (省略なしで以前のコードを使ってください)
+        if (file.isEmpty()) return null;
+        try {
+            Path uploadDir = Paths.get("/data/uploads");
+            if (!Files.exists(uploadDir)) Files.createDirectories(uploadDir);
+            String originalFilename = file.getOriginalFilename();
+            String storedFilename = UUID.randomUUID().toString() + "_" + originalFilename;
+            Files.copy(file.getInputStream(), uploadDir.resolve(storedFilename));
+            return storedFilename;
+        } catch (IOException e) { return null; }
     }
 }

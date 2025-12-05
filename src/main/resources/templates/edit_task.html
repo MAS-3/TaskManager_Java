@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>タスク編集</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/style/style.css}">
+</head>
+<body>
+
+    <div class="container mt-4">
+        
+        <header th:object="${task}">
+            <h1>タスク編集: #<span th:text="*{id}">1</span> <span th:text="*{title}"></span></h1>
+            <a th:href="@{/tasks}" class="btn btn-outline-secondary mt-2">&laquo; 一覧に戻る</a>
+        </header>
+
+        <hr>
+
+        <form th:action="@{/tasks/{id}/update(id=${task.id})}" th:object="${task}" method="post" enctype="multipart/form-data" class="form-add p-4">
+            
+            <div class="row mb-3">
+                <div class="col-md-8">
+                    <label class="form-label">タスク名*</label>
+                    <input type="text" th:field="*{title}" class="form-control" required>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">タスクジャンル*</label>
+                    <select name="genreId" class="form-select" required>
+                        <option value="">選択してください...</option>
+                        <option th:each="g : ${allGenres}" 
+                                th:value="${g.id}" 
+                                th:text="${g.name}"
+                                th:selected="${task.genre != null and g.id == task.genre.id}">
+                            デザイン
+                        </option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">タスク概要 (メモ)</label>
+                <textarea th:field="*{description}" rows="3" class="form-control"></textarea>
+            </div>
+
+            <hr>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <label class="form-label">開始日</label>
+                    <input type="date" name="startDate" class="form-control" 
+                        th:value="${task != null ? task.startDate : ''}"> </div>
+                <div class="col-md-6">
+                    <label class="form-label">終了日 (納期)</label>
+                    <input type="date" name="endDate" class="form-control" 
+                        th:value="${task != null ? task.endDate : ''}"> </div>
+            </div>
+
+            <div class="mb-3">
+                <h6>工程 (納期)</h6>
+                <div id="process-inputs">
+                    <div class="row mb-2" th:each="process : *{processes}">
+                        <div class="col-4">
+                            <input type="text" name="processName" class="form-control" placeholder="工程名" th:value="${process.name}">
+                        </div>
+                        <div class="col-3">
+                            <input type="date" name="processStartDate" class="form-control" th:value="${process.startDate}">
+                        </div>
+                        <div class="col-3">
+                            <input type="date" name="processEndDate" class="form-control" th:value="${process.endDate}">
+                        </div>
+                        <div class="col-2">
+                            <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" id="add-process" class="btn btn-sm btn-outline-secondary">+ 工程を追加</button>
+            </div>
+
+            <hr>
+
+            <div class="mb-3">
+                <h6>関連URL</h6>
+                <div id="url-inputs">
+                    <div class="row mb-2" th:each="url : *{relatedUrls}">
+                        <div class="col-5">
+                            <input type="text" name="urlName" class="form-control" placeholder="URL名" th:value="${url.name}">
+                        </div>
+                        <div class="col-5">
+                            <input type="text" name="urlLink" class="form-control" placeholder="http://" th:value="${url.url}">
+                        </div>
+                        <div class="col-2">
+                            <button type="button" class="btn btn-sm btn-danger remove-row">削除</button>
+                        </div>
+                    </div>
+                </div>
+                <button type="button" id="add-url" class="btn btn-sm btn-outline-secondary">+ URLを追加</button>
+            </div>
+
+            <hr>
+
+            <div class="mb-3">
+                <h6>画像添付</h6>
+                <div th:if="${!task.images.isEmpty()}" class="mb-2 d-flex flex-wrap gap-2">
+                    <div th:each="image : *{images}">
+                        <a th:href="@{/uploads/{f}(f=${image.filename})}" target="_blank">
+                            <img th:src="@{/uploads/{f}(f=${image.filename})}" 
+                                    style="height: 80px; width: auto; border: 1px solid #ddd; border-radius: 4px;"
+                                    alt="添付画像">
+                        </a>
+                    </div>
+                </div>
+                <input type="file" name="imageFiles" class="form-control" multiple accept="image/*">
+            </div>
+
+            <hr>
+
+            <div class="text-end">
+                <a th:href="@{/tasks}" class="btn btn-secondary">キャンセル</a>
+                <button type="submit" class="btn btn-primary">更新する</button>
+            </div>
+
+        </form> 
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script th:src="@{/js/main.js?v=4}"></script>
+</body>
+</html>
